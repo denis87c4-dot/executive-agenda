@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import json
+import os
 import pandas as pd
 import streamlit as st
 
@@ -9,6 +10,27 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Arquivo local para salvar os dados permanentemente
+DB_FILE = "agenda_executiva_db.json"
+
+def carregar_dados():
+    """Carrega os compromissos do arquivo JSON local se ele existir."""
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def salvar_dados(compromissos):
+    """Salva os compromissos no arquivo JSON local."""
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(compromissos, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        st.error(f"Erro ao salvar dados localmente: {e}")
 
 # Estilização Executiva (Clean, Moderna e Profissional)
 st.markdown(
@@ -59,16 +81,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Inicializar Estado da Agenda
+# Inicializar Estado da Agenda com o Banco de Dados Local
 if "compromissos" not in st.session_state:
-    st.session_state.compromissos = []
+    st.session_state.compromissos = carregar_dados()
 
 # Cabeçalho Executivo
 st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 25px;">
         <h1 style="margin:0; font-size: 28px;">💼 Executive Agenda Pro</h1>
-        <p style="margin:5px 0 0 0; color: #94A3B8; font-size: 15px;">Gestão estratégica de compromissos, prazos críticos e visão temporal inteligente.</p>
+        <p style="margin:5px 0 0 0; color: #94A3B8; font-size: 15px;">Gestão estratégica de compromissos com persistência local segura.</p>
     </div>
 """,
     unsafe_allow_html=True,
@@ -97,7 +119,7 @@ with col_m2:
 with col_m3:
     st.markdown(f"<div class='exec-card'><h3>Total na Agenda</h3><p style='color: #F8FAFC;'>{total_tarefas}</p></div>", unsafe_allow_html=True)
 with col_m4:
-    st.markdown(f"<div class='exec-card'><h3>Status do Núcleo</h3><p style='color: #4ADE80; font-size: 18px; margin-top: 8px;'>● Sincronizado</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='exec-card'><h3>Status do Núcleo</h3><p style='color: #4ADE80; font-size: 18px; margin-top: 8px;'>● Salvo em Disco</p></div>", unsafe_allow_html=True)
 
 st.write("---")
 
@@ -120,12 +142,12 @@ with aba_hoje_7dias:
         tarefas_hoje = [c for c in st.session_state.compromissos if c.get("Data") == hoje_obj.strftime("%Y-%m-%d")]
         
         if tarefas_hoje:
-            for idx, item in enumerate(tarefas_hoje):
-                # Encontrar índice real na session_state
+            for item in tarefas_hoje:
                 real_idx = st.session_state.compromissos.index(item)
                 status_box = st.checkbox(f"**{item['Hora']}** - {item['Titulo']} [{item['Prioridade']}]", value=item.get("Concluido", False), key=f"hoje_{real_idx}")
                 if status_box != item.get("Concluido", False):
                     st.session_state.compromissos[real_idx]["Concluido"] = status_box
+                    salvar_dados(st.session_state.compromissos)
                     st.rerun()
         else:
             st.info("Nenhum compromisso agendado para hoje. Aproveite o foco estratégico!")
@@ -139,7 +161,6 @@ with aba_hoje_7dias:
         
         if tarefas_7:
             for item in tarefas_7:
-                real_idx = st.session_state.compromissos.index(item)
                 cor_prioridade = "🔴" if item['Prioridade'] == "Alta" else "🟡" if item['Prioridade'] == "Média" else "🟢"
                 st.markdown(f"- {cor_prioridade} **{item['Data']} às {item['Hora']}**: {item['Titulo']} *({item['Categoria']})*")
         else:
@@ -179,7 +200,8 @@ with aba_novo:
                     "CriadoEm": datetime.now().strftime("%d/%m/%Y %H:%M")
                 }
                 st.session_state.compromissos.append(novo_item)
-                st.success("✅ Compromisso adicionado com sucesso!")
+                salvar_dados(st.session_state.compromissos)
+                st.success("✅ Compromisso adicionado e salvo com sucesso!")
 
 with aba_agenda:
     st.subheader("📅 Visão Consolidada (Filtros por Mês e Semana)")
@@ -199,21 +221,23 @@ with aba_agenda:
         if filtro_prio != "Todas":
             df_view = df_view[df_view["Prioridade"] == filtro_prio]
             
-        # Exibição interativa com caixas de seleção em tabela
         st.dataframe(
             df_view[["Data", "Hora", "Titulo", "Prioridade", "Categoria", "Local", "Concluido"]],
             use_container_width=True
         )
         
-        # Gestão e exclusão limpa
         st.write("### 🛠️ Marcar Concluído ou Gerenciar Itens")
         for idx, row in df_view.iterrows():
+            real_idx = st.session_state.compromissos.index(row.to_dict()) if row.to_dict() in st.session_state.compromissos else idx
             c_info, c_check = st.columns([5, 1])
             c_info.text(f"[{row['Data']} - {row['Hora']}] {row['Titulo']} ({row['Categoria']})")
-            if c_check.checkbox("Concluir", value=row["Concluido"], key=f"chk_vis_{idx}"):
-                st.session_state.compromissos[idx]["Concluido"] = True
-            else:
-                st.session_state.compromissos[idx]["Concluido"] = False
+            
+            estado_atual = row["Concluido"]
+            novo_estado = c_check.checkbox("Concluir", value=estado_atual, key=f"chk_vis_{idx}")
+            if novo_estado != estado_atual:
+                st.session_state.compromissos[real_idx]["Concluido"] = novo_estado
+                salvar_dados(st.session_state.compromissos)
+                st.rerun()
     else:
         st.info("Nenhum compromisso cadastrado no sistema.")
 
@@ -227,7 +251,7 @@ with aba_widget:
     if st.session_state.compromissos:
         pendentes_widget = [c for c in st.session_state.compromissos if not c.get("Concluido")]
         if pendentes_widget:
-            for w_item in pendentes_widget[:5]: # Mostra os 5 primeiros pendentes
+            for w_item in pendentes_widget[:5]:
                 p_cor = "🔴" if w_item['Prioridade'] == "Alta" else "⚡"
                 st.markdown(f"**{w_item['Data']} | {w_item['Hora']}** {p_cor} {w_item['Titulo']}")
         else:
@@ -258,8 +282,8 @@ with aba_backup:
                 dados_carregados = json.load(uploaded_file)
                 if isinstance(dados_carregados, list):
                     st.session_state.compromissos = dados_carregados
-                    st.success("🎉 Agenda sincronizada e restaurada com sucesso!")
+                    salvar_dados(st.session_state.compromissos)
+                    st.success("🎉 Agenda sincronizada, restaurada e salva localmente!")
                     st.rerun()
             except Exception as e:
                 st.error(f"Erro ao carregar arquivo: {e}")
-

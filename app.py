@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import json
 import os
-import calendar
 import pandas as pd
 import streamlit as st
 
@@ -80,21 +79,17 @@ if "compromissos" not in st.session_state:
 if "datas_importantes" not in st.session_state:
     st.session_state.datas_importantes = carregar_dados(DB_DATAS_IMPORTANTES)
 
-if "dia_selecionado" not in st.session_state:
-    st.session_state.dia_selecionado = datetime.now().date()
-
 st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 20px;">
-        <h1 style="margin:0; font-size: 26px;">📅 Executive Planner Mensal</h1>
-        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 14px;">Planejamento estilo planner de mesa com visão executiva e datas importantes.</p>
+        <h1 style="margin:0; font-size: 26px;">📅 Executive Dashboard Executivo</h1>
+        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 14px;">Gestão centralizada de compromissos e datas importantes.</p>
     </div>
 """,
     unsafe_allow_html=True,
 )
 
 hoje_obj = datetime.now().date()
-daqui_30_dias_obj = hoje_obj + timedelta(days=30)
 hoje_str = hoje_obj.strftime("%Y-%m-%d")
 
 tarefas_atrasadas = [
@@ -112,7 +107,7 @@ if tarefas_atrasadas:
     )
 
 # -------------------------------------------------------------
-# DASHBOARD: HOJE E DATAS IMPORTANTES
+# DASHBOARD SUPERIOR: HOJE E DATAS IMPORTANTES
 # -------------------------------------------------------------
 col_dash_1, col_dash_2 = st.columns(2)
 
@@ -145,7 +140,7 @@ with col_dash_2:
                 pass
     if importantes_futuras:
         importantes_ord = sorted(importantes_futuras, key=lambda x: x.get("Data"))
-        for item in importantes_ord[:5]: # Mostra as próximas 5
+        for item in importantes_ord[:5]:
             st.markdown(f"- ⭐ **{datetime.strptime(item['Data'], '%Y-%m-%d').strftime('%d/%m/%Y')}**: {item['Titulo']} *({item.get('Categoria', 'Marco')})*")
     else:
         st.write("Nenhuma data importante cadastrada para os próximos dias.")
@@ -153,127 +148,24 @@ with col_dash_2:
 
 st.write("---")
 
-aba_planner, aba_novo, aba_datas, aba_editar, aba_completa, aba_backup = st.tabs([
-    "🗓️ Planner Mensal", 
+# -------------------------------------------------------------
+# ABAS DO SISTEMA (VISÃO COMPLETA NO LUGAR DO PLANNER MENSAL)
+# -------------------------------------------------------------
+aba_completa, aba_novo, aba_datas, aba_editar, aba_backup = st.tabs([
+    "📅 Visão Completa", 
     "➕ Novo Compromisso", 
     "⭐ Datas Importantes",
     "✏️ Editar / Excluir",
-    "📅 Visão Completa", 
     "💾 Backup"
 ])
 
-with aba_planner:
-    c_ano, c_mes = st.columns(2)
-    with c_ano:
-        ano_selecionado = st.selectbox("Ano", [2025, 2026, 2027], index=1, key="pl_ano")
-    with c_mes:
-        meses_dict = {
-            1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL", 
-            5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO", 
-            9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
-        }
-        mes_selecionado = st.selectbox("Mês", options=list(meses_dict.keys()), format_func=lambda x: meses_dict[x], index=hoje_obj.month - 1, key="pl_mes")
-
-    st.markdown(f"<h2 style='text-align: center; letter-spacing: 3px; color: #5D4037;'>PLANNER MENSAL - {meses_dict[mes_selecionado]} / {ano_selecionado}</h2>", unsafe_allow_html=True)
-    st.write("")
-
-    cal_matriz = calendar.Calendar(firstweekday=0).monthdatescalendar(ano_selecionado, mes_selecionado)
-    dias_semana_nome = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
-    
-    cols_cab = st.columns(7)
-    for i, d_nome in enumerate(dias_semana_nome):
-        cor_cab = "#D32F2F" if i >= 5 else "#5D4037"
-        cols_cab[i].markdown(f"<div style='text-align: center; font-weight: bold; color: {cor_cab}; font-size: 13px; background-color: #F3EFEA; padding: 6px; border-radius: 4px;'>{d_nome}</div>", unsafe_allow_html=True)
-        
-    st.write("")
-
-    for semana in cal_matriz:
-        cols_semana = st.columns(7)
-        for i, data_dt in enumerate(semana):
-            with cols_semana[i]:
-                dia_num = data_dt.day
-                pertence_ao_mes = (data_dt.month == mes_selecionado)
-                data_str_atual = data_dt.strftime("%Y-%m-%d")
-                
-                tarefas_do_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_str_atual and not c.get("Concluido", False)]
-                
-                if not pertence_ao_mes:
-                    st.markdown(f"<div style='background-color: #FAF9F6; border: 1px dashed #E0D9D0; border-radius: 4px; padding: 6px; min-height: 85px; color: #D7CCC8; text-align: right; font-size: 12px;'>{dia_num}</div>", unsafe_allow_html=True)
-                else:
-                    is_selecionado = (st.session_state.dia_selecionado == data_dt)
-                    estilo_fundo = "background-color: #FFFFFF; border: 2px solid #5D4037;" if is_selecionado else "background-color: #FFFFFF; border: 1px solid #D7CCC8;"
-                    
-                    resumo_tarefas = ""
-                    for t in tarefas_do_dia[:3]:
-                        prio_cor = "🔴" if t['Prioridade'] == "Alta" else "🟡" if t['Prioridade'] == "Média" else "🟢"
-                        resumo_tarefas += f"<div style='font-size: 10px; color: #2D2926; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{prio_cor} {t['Hora']} {t['Titulo']}</div>"
-                    
-                    if len(tarefas_do_dia) > 3:
-                        resumo_tarefas += f"<div style='font-size: 9px; color: #8D6E63;'>+{len(tarefas_do_dia)-3} mais</div>"
-
-                    if st.button(f"{dia_num}", key=f"planner_btn_{data_str_atual}"):
-                        st.session_state.dia_selecionado = data_dt
-                        st.rerun()
-                    
-                    st.markdown(f"<div style='{estilo_fundo} border-radius: 4px; padding: 4px 6px; margin-top: -38px; min-height: 80px; pointer-events: none;'><b>{dia_num}</b><hr style='margin: 2px 0; border-top: 1px solid #E0D9D0;'>{resumo_tarefas}</div>", unsafe_allow_html=True)
-
-    st.write("---")
-    data_sel_str = st.session_state.dia_selecionado.strftime("%Y-%m-%d")
-    data_sel_formatada = st.session_state.dia_selecionado.strftime("%d/%m/%Y")
-    dia_semana_nome_sel = dias_semana_nome[st.session_state.dia_selecionado.weekday()]
-    
-    st.markdown(f"### 📋 Detalhes do Dia: **{dia_semana_nome_sel}, {data_sel_formatada}**", unsafe_allow_html=True)
-    
-    detalhes_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_sel_str]
-    
-    if detalhes_dia:
-        for d in detalhes_dia:
-            real_idx = st.session_state.compromissos.index(d)
-            p_cor = "🔴" if d['Prioridade'] == "Alta" else "🟡" if d['Prioridade'] == "Média" else "🟢"
-            
-            c_info, c_chk = st.columns([5, 1])
-            c_info.markdown(f"<div class='exec-card' style='padding: 10px; margin-bottom: 5px;'><b>{d['Hora']}</b> {p_cor} {d['Titulo']} <i>({d['Categoria']})</i><br><span style='font-size: 13px; color: #8D6E63;'>{d.get('Descricao', 'Sem notas.')}</span></div>", unsafe_allow_html=True)
-            
-            chk_concluido = c_chk.checkbox("Concluir", value=d.get("Concluido", False), key=f"chk_planner_{real_idx}")
-            if chk_concluido != d.get("Concluido", False):
-                st.session_state.compromissos[real_idx]["Concluido"] = chk_concluido
-                salvar_dados(st.session_state.compromissos, DB_FILE)
-                st.rerun()
+with aba_completa:
+    st.subheader("📅 Visão Geral Consolidada de Compromissos")
+    if st.session_state.compromissos:
+        df = pd.DataFrame(st.session_state.compromissos)
+        st.dataframe(df, use_container_width=True)
     else:
-        st.info("Nenhum compromisso agendado para este dia no planner.")
-
-    with st.form(key=f"form_rapido_planner_{data_sel_str}", clear_on_submit=True):
-        st.markdown(f"**➕ Adicionar compromisso em {data_sel_formatada}**")
-        fr_1, fr_2, fr_3, fr_4 = st.columns([2, 1, 1, 1])
-        with fr_1:
-            novo_tit = st.text_input("Título", placeholder="Compromisso...")
-        with fr_2:
-            novo_hor = st.time_input("Horário", value=datetime.now())
-        with fr_3:
-            novo_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
-        with fr_4:
-            novo_cat = st.text_input("Categoria", value="Geral", placeholder="Categoria...")
-            
-        btn_add = st.form_submit_button(f"Salvar em {data_sel_formatada}")
-        if btn_add:
-            if not novo_tit:
-                st.warning("Insira um título.")
-            else:
-                novo_item_rapido = {
-                    "Titulo": novo_tit,
-                    "Data": data_sel_str,
-                    "Hora": novo_hor.strftime("%H:%M"),
-                    "Prioridade": novo_pri,
-                    "Categoria": novo_cat,
-                    "Local": "",
-                    "Descricao": "",
-                    "Concluido": False,
-                    "CriadoEm": datetime.now().strftime("%d/%m/%Y %H:%M")
-                }
-                st.session_state.compromissos.append(novo_item_rapido)
-                salvar_dados(st.session_state.compromissos, DB_FILE)
-                st.success("Adicionado com sucesso!")
-                st.rerun()
+        st.info("Nenhum compromisso cadastrado ainda.")
 
 with aba_novo:
     st.subheader("➕ Adicionar Novo Compromisso Completo")
@@ -281,7 +173,7 @@ with aba_novo:
         c1, c2, c3 = st.columns(3)
         with c1:
             titulo = st.text_input("Título", placeholder="Ex: Reunião")
-            data_compromisso = st.date_input("Data", value=st.session_state.dia_selecionado)
+            data_compromisso = st.date_input("Data", value=datetime.now())
         with c2:
             hora_compromisso = st.time_input("Horário", value=datetime.now())
             prioridade = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
@@ -291,7 +183,7 @@ with aba_novo:
             
         descricao = st.text_area("Notas / Pautas", placeholder="Detalhes...")
         
-        if st.form_submit_button("🚀 Salvar no Planner"):
+        if st.form_submit_button("🚀 Salvar Compromisso"):
             if not titulo:
                 st.warning("O título é obrigatório.")
             else:
@@ -318,7 +210,7 @@ with aba_datas:
     with st.form("form_data_importante", clear_on_submit=True):
         di_1, di_2, di_3 = st.columns(3)
         with di_1:
-            di_tit = st.text_input("Descrição do Marco / Data", placeholder="Ex: Aniversário da Empresa / Prazo Final")
+            di_tit = st.text_input("Descrição do Marco / Data", placeholder="Ex: Aniversário / Prazo Final")
         with di_2:
             di_data = st.date_input("Data do Marco")
         with di_3:
@@ -379,14 +271,6 @@ with aba_editar:
                 st.rerun()
     else:
         st.info("Nenhum compromisso cadastrado.")
-
-with aba_completa:
-    st.subheader("📅 Visão Geral Consolidada")
-    if st.session_state.compromissos:
-        df = pd.DataFrame(st.session_state.compromissos)
-        st.dataframe(df, use_container_width=True)
-    else:
-        st.info("Sem dados.")
 
 with aba_backup:
     st.subheader("💾 Backup e Sincronização")

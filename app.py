@@ -49,15 +49,6 @@ st.markdown(
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
-    .planner-box {
-        background-color: #FFFFFF;
-        border: 1px solid #D7CCC8;
-        border-radius: 6px;
-        padding: 8px;
-        min-height: 110px;
-        vertical-align: top;
-        margin-bottom: 8px;
-    }
     .alert-card-atraso {
         background-color: #FBE9E7;
         border-left: 5px solid #D32F2F;
@@ -232,7 +223,7 @@ with aba_planner:
                     
                     st.markdown(f"<div style='{estilo_fundo} border-radius: 4px; padding: 4px 6px; margin-top: -38px; min-height: 80px; pointer-events: none;'><b>{dia_num}</b><hr style='margin: 2px 0; border-top: 1px solid #E0D9D0;'>{resumo_tarefas}</div>", unsafe_allow_html=True)
 
-    # Painel Inferior: Detalhes do Dia Selecionado + Adicionar Rápido
+    # Painel Inferior: Detalhes do Dia Selecionado + Adicionar Rápido com Categoria
     st.write("---")
     data_sel_str = st.session_state.dia_selecionado.strftime("%Y-%m-%d")
     data_sel_formatada = st.session_state.dia_selecionado.strftime("%d/%m/%Y")
@@ -260,13 +251,15 @@ with aba_planner:
 
     with st.form(key=f"form_rapido_planner_{data_sel_str}", clear_on_submit=True):
         st.markdown(f"**➕ Adicionar anotação ou compromisso em {data_sel_formatada}**")
-        fr_1, fr_2, fr_3 = st.columns([3, 1, 2])
+        fr_1, fr_2, fr_3, fr_4 = st.columns([2, 1, 1, 1])
         with fr_1:
             novo_tit = st.text_input("Título", placeholder="Compromisso ou tarefa...", label_visibility="collapsed")
         with fr_2:
             novo_hor = st.time_input("Horário", value=datetime.now(), label_visibility="collapsed")
         with fr_3:
             novo_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], label_visibility="collapsed")
+        with fr_4:
+            novo_cat = st.selectbox("Categoria", ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Geral"], label_visibility="collapsed")
             
         btn_add = st.form_submit_button(f"Salvar em {data_sel_formatada}")
         if btn_add:
@@ -278,7 +271,7 @@ with aba_planner:
                     "Data": data_sel_str,
                     "Hora": novo_hor.strftime("%H:%M"),
                     "Prioridade": novo_pri,
-                    "Categoria": "Geral",
+                    "Categoria": novo_cat,
                     "Local": "",
                     "Descricao": "",
                     "Concluido": False,
@@ -338,10 +331,11 @@ with aba_editar:
             nd = st.date_input("Data", value=datetime.strptime(item["Data"], "%Y-%m-%d").date())
             nh = st.time_input("Hora", value=datetime.strptime(item["Hora"], "%H:%M").time())
             np = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], index=["Alta", "Média", "Baixa"].index(item.get("Prioridade", "Média")))
+            nc = st.selectbox("Categoria", ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Geral"], index=["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Geral"].index(item.get("Categoria", "Geral")))
             
             c_b1, c_b2 = st.columns(2)
             if c_b1.form_submit_button("💾 Salvar"):
-                st.session_state.compromissos[idx_sel].update({"Titulo": nt, "Data": str(nd), "Hora": str(nh), "Prioridade": np})
+                st.session_state.compromissos[idx_sel].update({"Titulo": nt, "Data": str(nd), "Hora": str(nh), "Prioridade": np, "Categoria": nc})
                 salvar_dados(st.session_state.compromissos)
                 st.success("Atualizado!")
                 st.rerun()

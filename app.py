@@ -16,6 +16,7 @@ st.set_page_config(
 DB_FILE = "agenda_executiva_db.json"
 
 def carregar_dados():
+    """Carrega os compromissos do arquivo JSON local se ele existir."""
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -25,6 +26,7 @@ def carregar_dados():
     return []
 
 def salvar_dados(compromissos):
+    """Salva os compromissos no arquivo JSON local."""
     try:
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(compromissos, f, ensure_ascii=False, indent=4)
@@ -91,17 +93,20 @@ st.markdown(
 if "compromissos" not in st.session_state:
     st.session_state.compromissos = carregar_dados()
 
+if "dia_selecionado" not in st.session_state:
+    st.session_state.dia_selecionado = None
+
 st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 25px;">
         <h1 style="margin:0; font-size: 28px;">💼 Executive Agenda Pro</h1>
-        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 15px;">Gestão estratégica de compromissos com radar de urgência e calendário visual.</p>
+        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 15px;">Gestão estratégica de compromissos com radar de urgência e calendário interativo.</p>
     </div>
 """,
     unsafe_allow_html=True,
 )
 
-# Datas de referência (Base 2026)
+# Datas de referência
 hoje_obj = datetime.now().date()
 daqui_7_dias_obj = hoje_obj + timedelta(days=7)
 hoje_str = hoje_obj.strftime("%Y-%m-%d")
@@ -117,7 +122,7 @@ if tarefas_atrasadas:
     st.markdown(
         f"""
         <div class="alert-card-atraso">
-            <strong>⚠️ ATENÇÃO EXECUTIVA:</strong> Você possui <b>{len(tarefas_atrasadas)} compromisso(s) pendente(s) de dias anteriores</b> que não foram concluídos. Verifique a aba de Edição ou complete-os para zerar suas pendências.
+            <strong>⚠️ ATENÇÃO EXECUTIVA:</strong> Você possui <b>{len(tarefas_atrasadas)} compromisso(s) pendente(s) de dias anteriores</b> que não foram concluídos. Verifique a aba de Edição ou complete-os.
         </div>
         """,
         unsafe_allow_html=True
@@ -152,10 +157,10 @@ with col_m4:
 
 st.write("---")
 
-# Abas atualizadas com o Calendário Mensal (Item 2)
+# Abas de Navegação Executiva Completa
 aba_hoje_7dias, aba_calendario, aba_agenda, aba_novo, aba_editar, aba_widget, aba_backup = st.tabs([
     "⚡ Visão Foco (Hoje & 7 Dias)", 
-    "🗓️ Calendário Mensal",
+    "🗓️ Calendário Interativo",
     "📅 Visão Completa", 
     "➕ Novo Compromisso", 
     "✏️ Editar ou Excluir",
@@ -173,7 +178,6 @@ with aba_hoje_7dias:
         tarefas_hoje = [c for c in st.session_state.compromissos if c.get("Data") == hoje_str]
         
         if tarefas_hoje:
-            # Ordenar por prioridade (Alta primeiro) e hora
             ordem_prio = {"Alta": 1, "Média": 2, "Baixa": 3}
             tarefas_hoje_ordenadas = sorted(tarefas_hoje, key=lambda x: (ordem_prio.get(x.get("Prioridade", "Média"), 2), x.get("Hora", "00:00")))
             
@@ -212,13 +216,12 @@ with aba_hoje_7dias:
             st.info("Agenda limpa para a próxima semana.")
 
 with aba_calendario:
-    st.subheader("🗓️ Visão em Calendário Mensal")
-    st.markdown("Bata o olho na densidade do seu mês e veja quais dias possuem eventos programados.")
+    st.subheader("🗓️ Calendário Mensal Estilo Google Calendar")
+    st.markdown("Clique em qualquer dia para inspecionar os compromissos e detalhes logo abaixo.")
     
-    # Seleção de Ano e Mês
     c_ano, c_mes = st.columns(2)
     with c_ano:
-        ano_selecionado = st.selectbox("Ano", [2026, 2027, 2025], index=0)
+        ano_selecionado = st.selectbox("Ano", [2025, 2026, 2027], index=1)
     with c_mes:
         meses_dict = {
             1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 
@@ -229,25 +232,10 @@ with aba_calendario:
     
     st.write("---")
     
-    # Mapear datas que possuem compromissos ativos
-    dias_com_compromissos = {}
-    for c in st.session_state.compromissos:
-        if c.get("Data") and not c.get("Concluido", False):
-            try:
-                dt_c = datetime.strptime(c.get("Data"), "%Y-%m-%d")
-                if dt_c.year == ano_selecionado and dt_c.month == mes_selecionado:
-                    dia_num = dt_c.day
-                    if dia_num not in dias_com_compromissos:
-                        dias_com_compromissos[dia_num] = []
-                    dias_com_compromissos[dia_num].append(c["Titulo"])
-            except Exception:
-                pass
-
-    # Gerar matriz do calendário (Segunda a Domingo)
+    # Gerar matriz do calendário
     cal = calendar.monthcalendar(ano_selecionado, mes_selecionado)
     dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
     
-    # Criar tabela visual usando colunas do Streamlit
     cols_cabecalho = st.columns(7)
     for i, d_nome in enumerate(dias_semana):
         cols_cabecalho[i].markdown(f"<div style='text-align: center; font-weight: bold; color: #5D4037;'>{d_nome}</div>", unsafe_allow_html=True)
@@ -261,24 +249,39 @@ with aba_calendario:
                 if dia == 0:
                     st.markdown("<div style='padding: 10px; color: #D7CCC8; text-align: center;'>-</div>", unsafe_allow_html=True)
                 else:
-                    tem_evento = dia in dias_com_compromissos
-                    is_hoje = (dia == hoje_obj.day and mes_selecionado == hoje_obj.month and ano_selecionado == hoje_obj.year)
+                    data_str_atual = f"{ano_selecionado}-{mes_selecionado:02d}-{dia:02d}"
+                    tarefas_do_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_str_atual and not c.get("Concluido", False)]
                     
-                    if is_hoje:
-                        estilo_fundo = "background-color: #5D4037; color: white; border-radius: 8px; padding: 10px; text-align: center; font-weight: bold;"
-                    elif tem_evento:
-                        estilo_fundo = "background-color: #F3EFEA; border: 1px solid #8D6E63; color: #5D4037; border-radius: 8px; padding: 10px; text-align: center; font-weight: bold;"
-                    else:
-                        estilo_fundo = "background-color: #FAF9F6; border: 1px solid #E0E0E0; color: #757575; border-radius: 8px; padding: 10px; text-align: center;"
+                    # Desenhar indicador de bolinhas conforme prioridade
+                    indicadores = ""
+                    for t in tarefas_do_dia:
+                        prio = t.get("Prioridade", "Média")
+                        cor = "#D32F2F" if prio == "Alta" else "#FBC02D" if prio == "Média" else "#388E3C"
+                        tamanho = "12px" if prio == "Alta" else "8px"
+                        indicadores += f"<span style='height:{tamanho}; width:{tamanho}; background-color:{cor}; border-radius:50%; display:inline-block; margin:1px;' title='{t['Titulo']}'></span>"
+                    
+                    if cols_semana[i].button(f"{dia}", key=f"btn_cal_{dia}_{mes_selecionado}_{ano_selecionado}"):
+                        st.session_state.dia_selecionado = data_str_atual
                         
-                    st.markdown(f"<div style='{estilo_fundo}'>{dia}</div>", unsafe_allow_html=True)
-                    
-                    if tem_evento:
-                        titulos_resumo = ", ".join(dias_com_compromissos[dia][:2])
-                        if len(dias_com_compromissos[dia]) > 2:
-                            titulos_resumo += "..."
-                        st.markdown(f"<div style='font-size: 10px; text-align: center; color: #8D6E63; margin-top: 2px;'>📌 {titulos_resumo}</div>", unsafe_allow_html=True)
-                st.write("")
+                    cols_semana[i].markdown(f"<div style='margin-top:-8px; text-align:center; min-height:16px;'>{indicadores}</div>", unsafe_allow_html=True)
+
+    # Área de Detalhes ao Clicar no Dia
+    if st.session_state.dia_selecionado:
+        st.write("---")
+        st.markdown(f"### 📋 Detalhes para o dia: **{st.session_state.dia_selecionado}**")
+        detalhes = [c for c in st.session_state.compromissos if c.get("Data") == st.session_state.dia_selecionado]
+        
+        if detalhes:
+            for d in detalhes:
+                estado_concluido = "✅ (Concluído)" if d.get("Concluido") else "⏳ (Pendente)"
+                st.markdown(f"**{d.get('Hora', '00:00')}** - {d.get('Titulo')} *[{d.get('Categoria')}]* - {estado_concluido}")
+                if d.get("Descricao"):
+                    st.info(f"**Notas/Pautas:** {d.get('Descricao')}")
+                if d.get("Local"):
+                    st.write(f"📍 **Local/Link:** {d.get('Local')}")
+                st.write("---")
+        else:
+            st.info("Nenhum compromisso cadastrado para este dia específico.")
 
 with aba_novo:
     st.subheader("➕ Adicionar Novo Compromisso ou Tarefa")

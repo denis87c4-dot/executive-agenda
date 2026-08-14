@@ -6,8 +6,8 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Executive Dashboard - Pro",
-    page_icon="📊",
+    page_title="Executive Dashboard - Planner Pro",
+    page_icon="📅",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -30,7 +30,7 @@ def salvar_dados(compromissos):
     except Exception as e:
         st.error(f"Erro ao salvar dados localmente: {e}")
 
-# Estilização Global
+# Estilização Global Planner (Fundo Marfim #FAF9F6, Bordas e Tons Executivos)
 st.markdown(
     """
     <style>
@@ -45,22 +45,18 @@ st.markdown(
     .exec-card {
         background-color: #F3EFEA;
         border: 1px solid #D7CCC8;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
-    .exec-card h3 {
-        margin: 0;
-        color: #8D6E63;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-    }
-    .exec-card p {
-        margin: 8px 0 0 0;
-        color: #5D4037;
-        font-size: 26px;
-        font-weight: bold;
+    .planner-box {
+        background-color: #FFFFFF;
+        border: 1px solid #D7CCC8;
+        border-radius: 6px;
+        padding: 8px;
+        min-height: 110px;
+        vertical-align: top;
+        margin-bottom: 8px;
     }
     .alert-card-atraso {
         background-color: #FBE9E7;
@@ -74,7 +70,7 @@ st.markdown(
         background-color: #5D4037;
         color: white;
         border-radius: 6px;
-        padding: 8px 16px;
+        padding: 6px 12px;
         font-weight: 600;
         border: none;
         width: 100%;
@@ -95,9 +91,9 @@ if "dia_selecionado" not in st.session_state:
 
 st.markdown(
     """
-    <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 25px;">
-        <h1 style="margin:0; font-size: 28px;">📊 Executive Dashboard & Calendar</h1>
-        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 15px;">Visão consolidada para hoje, próximos 7 dias e calendário mensal interativo.</p>
+    <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 20px;">
+        <h1 style="margin:0; font-size: 26px;">📅 Executive Planner Mensal</h1>
+        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 14px;">Planejamento estilo planner de mesa (Segunda a Domingo) com visão executiva integrada.</p>
     </div>
 """,
     unsafe_allow_html=True,
@@ -123,14 +119,13 @@ if tarefas_atrasadas:
     )
 
 # -------------------------------------------------------------
-# DASHBOARD PRINCIPAL: HOJE E DAQUI A 7 DIAS (Topo em Destaque)
+# DASHBOARD: HOJE E DAQUI A 7 DIAS
 # -------------------------------------------------------------
-st.markdown("### ⚡ Visão Geral: Hoje & Próximos 7 Dias")
 col_dash_1, col_dash_2 = st.columns(2)
 
 with col_dash_1:
     st.markdown(f"<div class='exec-card'><h3>📌 Para Hoje ({hoje_obj.strftime('%d/%m/%Y')})</h3>", unsafe_allow_html=True)
-    tarefas_hoje = [c for c in st.session_state.compromissos if c.get("Data") == hoje_str]
+    tarefas_hoje = [c for c in st.session_state.compromissos if c.get("Data"] == hoje_str]
     if tarefas_hoje:
         for item in tarefas_hoje:
             real_idx = st.session_state.compromissos.index(item)
@@ -167,48 +162,45 @@ with col_dash_2:
 st.write("---")
 
 # -------------------------------------------------------------
-# ABAS DE NAVEGAÇÃO COMPLETA
+# ABAS DE NAVEGAÇÃO
 # -------------------------------------------------------------
-aba_calendario, aba_novo, aba_editar, aba_completa, aba_backup = st.tabs([
-    "🗓️ Calendário Mensal", 
+aba_planner, aba_novo, aba_editar, aba_completa, aba_backup = st.tabs([
+    "🗓️ Planner Mensal (Estilo Mesa)", 
     "➕ Novo Compromisso", 
     "✏️ Editar ou Excluir",
     "📅 Visão Completa", 
     "💾 Backup"
 ])
 
-with aba_calendario:
-    st.subheader("🗓️ Calendário Mensal Estilo Grade Horizontal")
-    
-    # Seletor de Mês e Ano
+with aba_planner:
+    # Seletor de Mês e Ano Estilo Planner
     c_ano, c_mes = st.columns(2)
     with c_ano:
-        ano_selecionado = st.selectbox("Ano", [2025, 2026, 2027], index=1, key="cal_ano_h")
+        ano_selecionado = st.selectbox("Ano", [2025, 2026, 2027], index=1, key="pl_ano")
     with c_mes:
         meses_dict = {
-            1: "JAN", 2: "FEV", 3: "MAR", 4: "ABR", 
-            5: "MAI", 6: "JUN", 7: "JUL", 8: "AGO", 
-            9: "SET", 10: "OUT", 11: "NOV", 12: "DEZ"
+            1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL", 
+            5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO", 
+            9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
         }
-        mes_selecionado = st.selectbox("Mês", options=list(meses_dict.keys()), format_func=lambda x: meses_dict[x], index=hoje_obj.month - 1, key="cal_mes_h")
+        mes_selecionado = st.selectbox("Mês", options=list(meses_dict.keys()), format_func=lambda x: meses_dict[x], index=hoje_obj.month - 1, key="pl_mes")
 
-    st.markdown(f"<h2 style='text-align: center; letter-spacing: 2px; color: #5D4037;'>{meses_dict[mes_selecionado]} {ano_selecionado}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align: center; letter-spacing: 3px; color: #5D4037;'>PLANNER MENSAL - {meses_dict[mes_selecionado]} / {ano_selecionado}</h2>", unsafe_allow_html=True)
     st.write("")
 
-    # Grade padrão horizontal (Iniciando no Domingo)
-    cal_matriz = calendar.Calendar(firstweekday=6).monthdatescalendar(ano_selecionado, mes_selecionado)
-    dias_cabecalho = ["S", "M", "T", "W", "T", "F", "S"]  # Domingo a Sábado (ou S/M/T...)
-    dias_nomes_completos = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+    # Configuração de Calendário começando na SEGUNDA-FEIRA (firstweekday=0)
+    cal_matriz = calendar.Calendar(firstweekday=0).monthdatescalendar(ano_selecionado, mes_selecionado)
+    dias_semana_nome = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
     
-    # Cabeçalho Horizontal dos Dias da Semana
+    # Cabeçalho do Planner (Segunda a Domingo)
     cols_cab = st.columns(7)
-    for i, d_nome in enumerate(["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]):
-        cor_cab = "#D32F2F" if i == 0 else "#5D4037"
-        cols_cab[i].markdown(f"<div style='text-align: center; font-weight: bold; color: {cor_cab}; font-size: 13px;'>{d_nome}</div>", unsafe_allow_html=True)
+    for i, d_nome in enumerate(dias_semana_nome):
+        cor_cab = "#D32F2F" if i >= 5 else "#5D4037" # Finais de semana em destaque
+        cols_cab[i].markdown(f"<div style='text-align: center; font-weight: bold; color: {cor_cab}; font-size: 13px; background-color: #F3EFEA; padding: 6px; border-radius: 4px;'>{d_nome}</div>", unsafe_allow_html=True)
         
     st.write("")
 
-    # Renderização da grade linha por linha (horizontal)
+    # Renderização da grade do Planner (linhas de semanas)
     for semana in cal_matriz:
         cols_semana = st.columns(7)
         for i, data_dt in enumerate(semana):
@@ -217,56 +209,70 @@ with aba_calendario:
                 pertence_ao_mes = (data_dt.month == mes_selecionado)
                 data_str_atual = data_dt.strftime("%Y-%m-%d")
                 
-                # Buscar tarefas ativas do dia
+                # Compromissos do dia
                 tarefas_do_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_str_atual and not c.get("Concluido", False)]
                 
-                # Indicadores em bolinhas (maiores para Alta, menores para Média/Baixa)
-                indicadores = ""
-                for t in tarefas_do_dia:
-                    prio = t.get("Prioridade", "Média")
-                    cor = "#D32F2F" if prio == "Alta" else "#FBC02D" if prio == "Média" else "#388E3C"
-                    tamanho = "9px" if prio == "Alta" else "6px"
-                    indicadores += f"<span style='height:{tamanho}; width:{tamanho}; background-color:{cor}; border-radius:50%; display:inline-block; margin:1px;' title='{t['Titulo']}'></span>"
-
                 if not pertence_ao_mes:
-                    st.markdown(f"<div style='text-align: center; color: #D7CCC8; padding: 6px; font-size: 13px;'>{dia_num}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background-color: #FAF9F6; border: 1px dashed #E0D9D0; border-radius: 4px; padding: 6px; min-height: 85px; color: #D7CCC8; text-align: right; font-size: 12px;'>{dia_num}</div>", unsafe_allow_html=True)
                 else:
-                    if st.button(f"{dia_num}", key=f"btn_h_{data_str_atual}"):
+                    # Botão estilo caixinha do dia do planner
+                    is_selecionado = (st.session_state.dia_selecionado == data_dt)
+                    estilo_fundo = "background-color: #FFFFFF; border: 2px solid #5D4037;" if is_selecionado else "background-color: #FFFFFF; border: 1px solid #D7CCC8;"
+                    
+                    # Montar resumos curtos das tarefas dentro da caixinha
+                    resumo_tarefas = ""
+                    for t in tarefas_do_dia[:3]: # Mostra até 3 para não estourar o layout
+                        prio_cor = "🔴" if t['Prioridade'] == "Alta" else "🟡" if t['Prioridade'] == "Média" else "🟢"
+                        resumo_tarefas += f"<div style='font-size: 10px; color: #2D2926; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{prio_cor} {t['Hora']} {t['Titulo']}</div>"
+                    
+                    if len(tarefas_do_dia) > 3:
+                        resumo_tarefas += f"<div style='font-size: 9px; color: #8D6E63;'>+{len(tarefas_do_dia)-3} mais</div>"
+
+                    # Renderização do dia como botão interativo
+                    if st.button(f"{dia_num}", key=f"planner_btn_{data_str_atual}"):
                         st.session_state.dia_selecionado = data_dt
                         st.rerun()
                     
-                    st.markdown(f"<div style='margin-top:-6px; text-align:center; min-height:12px;'>{indicadores}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='{estilo_fundo} border-radius: 4px; padding: 4px 6px; margin-top: -38px; min-height: 80px; pointer-events: none;'><b>{dia_num}</b><hr style='margin: 2px 0; border-top: 1px solid #E0D9D0;'>{resumo_tarefas}</div>", unsafe_allow_html=True)
 
-    # Painel Inferior: Detalhes da Data Selecionada + Adicionar Rápido
+    # Painel Inferior: Detalhes do Dia Selecionado + Adicionar Rápido
     st.write("---")
     data_sel_str = st.session_state.dia_selecionado.strftime("%Y-%m-%d")
-    data_sel_formatada = st.session_state.dia_selecionado.strftime("%d %b %Y").upper()
-    dia_semana_nome = st.session_state.dia_selecionado.strftime("%A").upper()
+    data_sel_formatada = st.session_state.dia_selecionado.strftime("%d/%m/%Y")
+    dia_semana_nome_sel = dias_semana_nome[st.session_state.dia_selecionado.weekday()]
     
-    st.markdown(f"### **{st.session_state.dia_selecionado.day}** <span style='font-size: 16px; color: #8D6E63;'>{dia_semana_nome} ({data_sel_str})</span>", unsafe_allow_html=True)
+    st.markdown(f"### 📋 Detalhes do Dia: **{dia_semana_nome_sel}, {data_sel_formatada}**", unsafe_allow_html=True)
     
     detalhes_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_sel_str]
     
     if detalhes_dia:
         for d in detalhes_dia:
+            real_idx = st.session_state.compromissos.index(d)
             p_cor = "🔴" if d['Prioridade'] == "Alta" else "🟡" if d['Prioridade'] == "Média" else "🟢"
-            estado_txt = "✅ Concluído" if d.get("Concluido") else "⏳ Pendente"
-            st.markdown(f"<div class='exec-card' style='margin-bottom: 8px; padding: 10px;'><b>{d['Hora']}</b> {p_cor} {d['Titulo']} <i>({d['Categoria']})</i> - {estado_txt}<br><span style='color: #8D6E63; font-size: 13px;'>{d.get('Descricao', 'Sem notas.')}</span></div>", unsafe_allow_html=True)
+            
+            c_info, c_chk = st.columns([5, 1])
+            c_info.markdown(f"<div class='exec-card' style='padding: 10px; margin-bottom: 5px;'><b>{d['Hora']}</b> {p_cor} {d['Titulo']} <i>({d['Categoria']})</i><br><span style='font-size: 13px; color: #8D6E63;'>{d.get('Descricao', 'Sem notas.')}</span></div>", unsafe_allow_html=True)
+            
+            chk_concluido = c_chk.checkbox("Concluir", value=d.get("Concluido", False), key=f"chk_planner_{real_idx}")
+            if chk_concluido != d.get("Concluido", False):
+                st.session_state.compromissos[real_idx]["Concluido"] = chk_concluido
+                salvar_dados(st.session_state.compromissos)
+                st.rerun()
     else:
-        st.markdown("<p style='color: #8D6E63; font-style: italic;'>Nenhum compromisso neste dia. Use o campo abaixo para adicionar.</p>", unsafe_allow_html=True)
+        st.info("Nenhum compromisso agendado para este dia no planner.")
 
-    # Caixa rápida para adicionar compromisso na data selecionada
-    with st.form(key=f"form_rapido_h_{data_sel_str}", clear_on_submit=True):
-        st.markdown(f"**Adicionar compromisso em {data_sel_formatada}**")
+    # Caixa de Adição Rápida na data selecionada
+    with st.form(key=f"form_rapido_planner_{data_sel_str}", clear_on_submit=True):
+        st.markdown(f"**➕ Adicionar anotação ou compromisso em {data_sel_formatada}**")
         fr_1, fr_2, fr_3 = st.columns([3, 1, 2])
         with fr_1:
-            novo_tit = st.text_input("Título", placeholder="Título...", label_visibility="collapsed")
+            novo_tit = st.text_input("Título", placeholder="Compromisso ou tarefa...", label_visibility="collapsed")
         with fr_2:
             novo_hor = st.time_input("Horário", value=datetime.now(), label_visibility="collapsed")
         with fr_3:
             novo_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], label_visibility="collapsed")
             
-        btn_add = st.form_submit_button(f"+ Add on {data_sel_formatada}")
+        btn_add = st.form_submit_button(f"Salvar em {data_sel_formatada}")
         if btn_add:
             if not novo_tit:
                 st.warning("Insira um título.")
@@ -303,7 +309,7 @@ with aba_novo:
             
         descricao = st.text_area("Notas / Pautas", placeholder="Detalhes...")
         
-        if st.form_submit_button("🚀 Salvar Compromisso"):
+        if st.form_submit_button("🚀 Salvar no Planner"):
             if not titulo:
                 st.warning("O título é obrigatório.")
             else:

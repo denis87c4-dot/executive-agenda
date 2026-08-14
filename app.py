@@ -88,7 +88,7 @@ st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 25px;">
         <h1 style="margin:0; font-size: 28px;">💼 Executive Agenda Pro</h1>
-        <p style="margin:5px 0 0 0; color: #94A3B8; font-size: 15px;">Gestão estratégica de compromissos com persistência local segura.</p>
+        <p style="margin:5px 0 0 0; color: #94A3B8; font-size: 15px;">Gestão estratégica de compromissos com persistência e edição flexível.</p>
     </div>
 """,
     unsafe_allow_html=True,
@@ -106,7 +106,6 @@ compromissos_hoje = sum(
     1 for c in st.session_state.compromissos if c.get("Data") == hoje_obj.strftime("%Y-%m-%d") and not c.get("Concluido", False)
 )
 
-# Cálculo robusto para os próximos 7 dias utilizando objetos de data reais
 compromissos_7dias = 0
 for c in st.session_state.compromissos:
     if not c.get("Concluido", False) and c.get("Data"):
@@ -128,10 +127,12 @@ with col_m4:
 
 st.write("---")
 
-aba_hoje_7dias, aba_agenda, aba_novo, aba_widget, aba_backup = st.tabs([
+# Adicionando a aba "✏️ Editar ou Excluir"
+aba_hoje_7dias, aba_agenda, aba_novo, aba_editar, aba_widget, aba_backup = st.tabs([
     "⚡ Visão Foco (Hoje & 7 Dias)", 
-    "📅 Visão Completa (Mês/Semana)", 
+    "📅 Visão Completa", 
     "➕ Novo Compromisso", 
+    "✏️ Editar ou Excluir",
     "📱 Widget Simplificado", 
     "💾 Backup & Dados"
 ])
@@ -164,14 +165,12 @@ with aba_hoje_7dias:
             if c.get("Data"):
                 try:
                     d_item = datetime.strptime(c.get("Data"), "%Y-%m-%d").date()
-                    # Inclui de hoje até 7 dias pra frente (estrito maior que hoje ou igual)
                     if hoje_obj <= d_item <= daqui_7_dias_obj:
                         tarefas_7.append(c)
                 except Exception:
                     pass
         
         if tarefas_7:
-            # Ordenar por data/hora
             tarefas_7_ordenadas = sorted(tarefas_7, key=lambda x: (x.get("Data"), x.get("Hora")))
             for item in tarefas_7_ordenadas:
                 cor_prioridade = "🔴" if item['Prioridade'] == "Alta" else "🟡" if item['Prioridade'] == "Média" else "🟢"
@@ -193,10 +192,7 @@ with aba_novo:
         with c3:
             lista_categorias = ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Outra..."]
             categoria_escolhida = st.selectbox("Categoria", lista_categorias)
-            
-            # Campo condicional se escolher "Outra..."
             categoria_custom = st.text_input("Especifique a Categoria", placeholder="Digite se escolheu 'Outra...'")
-            
             local = st.text_input("Local / Link", placeholder="Ex: Sala de Reuniões 3 ou Meet")
             
         descricao = st.text_area("Notas / Pautas importantes", placeholder="Detalhes rápidos...")
@@ -206,7 +202,6 @@ with aba_novo:
             if not titulo:
                 st.warning("⚠️ O título do compromisso é obrigatório.")
             else:
-                # Definir categoria final baseada na escolha
                 cat_final = categoria_custom.strip() if categoria_escolhida == "Outra..." and categoria_custom.strip() else categoria_escolhida
                 if cat_final == "Outra...":
                     cat_final = "Geral"
@@ -225,6 +220,92 @@ with aba_novo:
                 st.session_state.compromissos.append(novo_item)
                 salvar_dados(st.session_state.compromissos)
                 st.success("✅ Compromisso adicionado e salvo com sucesso!")
+
+with aba_editar:
+    st.subheader("✏️ Editar ou Excluir Compromissos Existentes")
+    
+    if st.session_state.compromissos:
+        # Criar rótulos claros para identificar cada compromisso no Selectbox
+        opcoes_compromissos = {
+            f"[{c['Data']} - {c['Hora']}] {c['Titulo']} ({c['Categoria']})": idx 
+            for idx, c in enumerate(st.session_state.compromissos)
+        }
+        
+        escolha_str = st.selectbox("Selecione o compromisso que deseja alterar:", list(opcoes_compromissos.keys()))
+        idx_selecionado = opcoes_compromissos[escolha_str]
+        item_atual = st.session_state.compromissos[idx_selecionado]
+        
+        st.write("---")
+        st.markdown(f"### Editando: **{item_atual['Titulo']}**")
+        
+        with st.form("form_edicao"):
+            e1, e2, e3 = st.columns(3)
+            with e1:
+                novo_titulo = st.text_input("Título", value=item_atual.get("Titulo", ""))
+                try:
+                    data_inicial = datetime.strptime(item_atual.get("Data", hoje_obj.strftime("%Y-%m-%d")), "%Y-%m-%d").date()
+                except Exception:
+                    data_inicial = hoje_obj
+                nova_data = st.date_input("Data", value=data_inicial)
+            with e2:
+                try:
+                    hora_inicial = datetime.strptime(item_atual.get("Hora", "09:00"), "%H:%M").time()
+                except Exception:
+                    hora_inicial = datetime.now().time()
+                nova_hora = st.time_input("Horário", value=hora_inicial)
+                
+                prioridades_disponiveis = ["Alta", "Média", "Baixa"]
+                idx_prio = prioridades_disponiveis.index(item_atual.get("Prioridade", "Média")) if item_atual.get("Prioridade") in prioridades_disponiveis else 1
+                nova_prio = st.selectbox("Prioridade", prioridades_disponiveis, index=idx_prio)
+            with e3:
+                cats_base = ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem"]
+                cat_atual = item_atual.get("Categoria", "Reunião")
+                if cat_atual not in cats_base:
+                    cats_base.append(cat_atual)
+                cats_base.append("Outra...")
+                
+                idx_cat = cats_base.index(cat_atual) if cat_atual in cats_base else 0
+                nova_cat_escolha = st.selectbox("Categoria", cats_base, index=idx_cat)
+                nova_cat_custom = st.text_input("Nova Categoria (se escolheu Outra...)", placeholder="")
+                
+                novo_local = st.text_input("Local / Link", value=item_atual.get("Local", ""))
+                
+            nova_desc = st.text_area("Notas / Pautas", value=item_atual.get("Descricao", ""))
+            
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                salvar_edicao = st.form_submit_button("💾 Salvar Alterações")
+            with col_b2:
+                excluir_item = st.form_submit_button("🗑️ Excluir Este Compromisso")
+                
+            if salvar_edicao:
+                if not novo_titulo:
+                    st.warning("⚠️ O título não pode ficar em branco.")
+                else:
+                    cat_final = nova_cat_custom.strip() if nova_cat_escolha == "Outra..." and nova_cat_custom.strip() else nova_cat_escolha
+                    if cat_final == "Outra...":
+                        cat_final = "Geral"
+                        
+                    st.session_state.compromissos[idx_selecionado].update({
+                        "Titulo": novo_titulo,
+                        "Data": nova_data.strftime("%Y-%m-%d"),
+                        "Hora": nova_hora.strftime("%H:%M"),
+                        "Prioridade": nova_prio,
+                        "Categoria": cat_final,
+                        "Local": novo_local,
+                        "Descricao": nova_desc
+                    })
+                    salvar_dados(st.session_state.compromissos)
+                    st.success("🎉 Compromisso atualizado com sucesso!")
+                    st.rerun()
+                    
+            if excluir_item:
+                st.session_state.compromissos.pop(idx_selecionado)
+                salvar_dados(st.session_state.compromissos)
+                st.success("🗑️ Compromisso excluído com sucesso!")
+                st.rerun()
+    else:
+        st.info("Nenhum compromisso cadastrado para editar.")
 
 with aba_agenda:
     st.subheader("📅 Visão Consolidada (Filtros por Mês e Semana)")
@@ -249,7 +330,7 @@ with aba_agenda:
             use_container_width=True
         )
         
-        st.write("### 🛠️ Marcar Concluído ou Gerenciar Itens")
+        st.write("### 🛠️ Marcar Concluído")
         for idx, row in df_view.iterrows():
             real_idx = st.session_state.compromissos.index(row.to_dict()) if row.to_dict() in st.session_state.compromissos else idx
             c_info, c_check = st.columns([5, 1])

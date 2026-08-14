@@ -16,7 +16,6 @@ st.set_page_config(
 DB_FILE = "agenda_executiva_db.json"
 
 def carregar_dados():
-    """Carrega os compromissos do arquivo JSON local se ele existir."""
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -26,14 +25,13 @@ def carregar_dados():
     return []
 
 def salvar_dados(compromissos):
-    """Salva os compromissos no arquivo JSON local."""
     try:
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(compromissos, f, ensure_ascii=False, indent=4)
     except Exception as e:
         st.error(f"Erro ao salvar dados localmente: {e}")
 
-# Estilização Executiva (Fundo Marfim/Bege Claro com Marrom Profissional)
+# Estilização inspirada no app Samsung Calendar / Clean Minimalista
 st.markdown(
     """
     <style>
@@ -94,13 +92,13 @@ if "compromissos" not in st.session_state:
     st.session_state.compromissos = carregar_dados()
 
 if "dia_selecionado" not in st.session_state:
-    st.session_state.dia_selecionado = None
+    st.session_state.dia_selecionado = datetime.now().date()
 
 st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 25px;">
         <h1 style="margin:0; font-size: 28px;">💼 Executive Agenda Pro</h1>
-        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 15px;">Gestão estratégica de compromissos com radar de urgência e calendário interativo.</p>
+        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 15px;">Interface limpa estilo calendário mobile com gestão estratégica de compromissos.</p>
     </div>
 """,
     unsafe_allow_html=True,
@@ -111,18 +109,17 @@ hoje_obj = datetime.now().date()
 daqui_7_dias_obj = hoje_obj + timedelta(days=7)
 hoje_str = hoje_obj.strftime("%Y-%m-%d")
 
-# Verificação de itens atrasados (pendentes com data anterior a hoje)
+# Verificação de itens atrasados
 tarefas_atrasadas = [
     c for c in st.session_state.compromissos 
     if not c.get("Concluido", False) and c.get("Data", "") < hoje_str
 ]
 
-# Exibir Alerta Visual de Atraso se houver pendências passadas
 if tarefas_atrasadas:
     st.markdown(
         f"""
         <div class="alert-card-atraso">
-            <strong>⚠️ ATENÇÃO EXECUTIVA:</strong> Você possui <b>{len(tarefas_atrasadas)} compromisso(s) pendente(s) de dias anteriores</b> que não foram concluídos. Verifique a aba de Edição ou complete-os.
+            <strong>⚠️ ATENÇÃO EXECUTIVA:</strong> Você possui <b>{len(tarefas_atrasadas)} compromisso(s) pendente(s) de dias anteriores</b> que não foram concluídos.
         </div>
         """,
         unsafe_allow_html=True
@@ -157,10 +154,10 @@ with col_m4:
 
 st.write("---")
 
-# Abas de Navegação Executiva Completa
+# Abas de Navegação
 aba_hoje_7dias, aba_calendario, aba_agenda, aba_novo, aba_editar, aba_widget, aba_backup = st.tabs([
     "⚡ Visão Foco (Hoje & 7 Dias)", 
-    "🗓️ Calendário Interativo",
+    "🗓️ Calendário Estilo Samsung",
     "📅 Visão Completa", 
     "➕ Novo Compromisso", 
     "✏️ Editar ou Excluir",
@@ -216,81 +213,130 @@ with aba_hoje_7dias:
             st.info("Agenda limpa para a próxima semana.")
 
 with aba_calendario:
-    st.subheader("🗓️ Calendário Mensal Estilo Google Calendar")
-    st.markdown("Clique em qualquer dia para inspecionar os compromissos e detalhes logo abaixo.")
-    
+    # Seletor de Mês e Ano Estilo Limpo
     c_ano, c_mes = st.columns(2)
     with c_ano:
-        ano_selecionado = st.selectbox("Ano", [2025, 2026, 2027], index=1)
+        ano_selecionado = st.selectbox("Ano", [2025, 2026, 2027], index=1, key="cal_ano")
     with c_mes:
         meses_dict = {
-            1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 
-            5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 
-            9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+            1: "JAN", 2: "FEV", 3: "MAR", 4: "ABR", 
+            5: "MAI", 6: "JUN", 7: "JUL", 8: "AGO", 
+            9: "SET", 10: "OUT", 11: "NOV", 12: "DEZ"
         }
-        mes_selecionado = st.selectbox("Mês", options=list(meses_dict.keys()), format_func=lambda x: meses_dict[x], index=hoje_obj.month - 1)
-    
-    st.write("---")
-    
-    # Gerar matriz do calendário
-    cal = calendar.monthcalendar(ano_selecionado, mes_selecionado)
-    dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        mes_selecionado = st.selectbox("Mês", options=list(meses_dict.keys()), format_func=lambda x: meses_dict[x], index=hoje_obj.month - 1, key="cal_mes")
+
+    st.markdown(f"<h2 style='text-align: center; letter-spacing: 2px; color: #5D4037; margin-top: 10px;'>{meses_dict[mes_selecionado]} {ano_selecionado}</h2>", unsafe_allow_html=True)
+    st.write("")
+
+    # Configuração de Calendário (Começando no Domingo como na imagem)
+    cal = calendar.Calendar(firstweekday=6).monthdatescalendar(ano_selecionado, mes_selecionado)
+    dias_semana = ["S", "M", "T", "W", "T", "F", "S"]  # Estilo limpo de iniciais
     
     cols_cabecalho = st.columns(7)
-    for i, d_nome in enumerate(dias_semana):
-        cols_cabecalho[i].markdown(f"<div style='text-align: center; font-weight: bold; color: #5D4037;'>{d_nome}</div>", unsafe_allow_html=True)
+    for i, d_nome in enumerate(["S", "M", "T", "W", "T", "F", "S"]):
+        cor_cab = "#D32F2F" if i == 0 else "#5D4037" # Domingo em destaque vermelho
+        cols_cabecalho[i].markdown(f"<div style='text-align: center; font-weight: bold; color: {cor_cab}; font-size: 14px;'>{d_nome}</div>", unsafe_allow_html=True)
         
     st.write("")
-    
+
+    # Renderização da grade idêntica ao app
     for semana in cal:
         cols_semana = st.columns(7)
-        for i, dia in enumerate(semana):
+        for i, data_dt in enumerate(semana):
             with cols_semana[i]:
-                if dia == 0:
-                    st.markdown("<div style='padding: 10px; color: #D7CCC8; text-align: center;'>-</div>", unsafe_allow_html=True)
-                else:
-                    data_str_atual = f"{ano_selecionado}-{mes_selecionado:02d}-{dia:02d}"
-                    tarefas_do_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_str_atual and not c.get("Concluido", False)]
-                    
-                    # Desenhar indicador de bolinhas conforme prioridade
-                    indicadores = ""
-                    for t in tarefas_do_dia:
-                        prio = t.get("Prioridade", "Média")
-                        cor = "#D32F2F" if prio == "Alta" else "#FBC02D" if prio == "Média" else "#388E3C"
-                        tamanho = "12px" if prio == "Alta" else "8px"
-                        indicadores += f"<span style='height:{tamanho}; width:{tamanho}; background-color:{cor}; border-radius:50%; display:inline-block; margin:1px;' title='{t['Titulo']}'></span>"
-                    
-                    if cols_semana[i].button(f"{dia}", key=f"btn_cal_{dia}_{mes_selecionado}_{ano_selecionado}"):
-                        st.session_state.dia_selecionado = data_str_atual
-                        
-                    cols_semana[i].markdown(f"<div style='margin-top:-8px; text-align:center; min-height:16px;'>{indicadores}</div>", unsafe_allow_html=True)
+                dia_num = data_dt.day
+                pertence_ao_mes = (data_dt.month == mes_selecionado)
+                data_str_atual = data_dt.strftime("%Y-%m-%d")
+                
+                # Buscar tarefas ativas do dia
+                tarefas_do_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_str_atual and not c.get("Concluido", False)]
+                
+                # Montar bolinhas de prioridade maiores ou menores
+                indicadores = ""
+                for t in tarefas_do_dia:
+                    prio = t.get("Prioridade", "Média")
+                    cor = "#D32F2F" if prio == "Alta" else "#FBC02D" if prio == "Média" else "#388E3C"
+                    tamanho = "10px" if prio == "Alta" else "6px"
+                    indicadores += f"<span style='height:{tamanho}; width:{tamanho}; background-color:{cor}; border-radius:50%; display:inline-block; margin:1px;' title='{t['Titulo']}'></span>"
 
-    # Área de Detalhes ao Clicar no Dia
-    if st.session_state.dia_selecionado:
-        st.write("---")
-        st.markdown(f"### 📋 Detalhes para o dia: **{st.session_state.dia_selecionado}**")
-        detalhes = [c for c in st.session_state.compromissos if c.get("Data") == st.session_state.dia_selecionado]
-        
-        if detalhes:
-            for d in detalhes:
-                estado_concluido = "✅ (Concluído)" if d.get("Concluido") else "⏳ (Pendente)"
-                st.markdown(f"**{d.get('Hora', '00:00')}** - {d.get('Titulo')} *[{d.get('Categoria')}]* - {estado_concluido}")
-                if d.get("Descricao"):
-                    st.info(f"**Notas/Pautas:** {d.get('Descricao')}")
-                if d.get("Local"):
-                    st.write(f"📍 **Local/Link:** {d.get('Local')}")
-                st.write("---")
-        else:
-            st.info("Nenhum compromisso cadastrado para este dia específico.")
+                # Estilo se for o dia selecionado ou o dia de hoje
+                is_selecionado = (st.session_state.dia_selecionado == data_dt)
+                is_hoje = (data_dt == hoje_obj)
+                
+                estilo_btn = "background-color: transparent; color: #2D2926; border: none;"
+                if is_selecionado:
+                    estilo_btn = "background-color: #5D4037; color: white; border-radius: 50%; font-weight: bold;"
+                elif is_hoje:
+                    estilo_btn = "border: 2px solid #5D4037; border-radius: 50%; font-weight: bold;"
+                
+                if not pertence_ao_mes:
+                    # Dias cinzas do mês anterior/seguinte
+                    st.markdown(f"<div style='text-align: center; color: #D7CCC8; padding: 8px; font-size: 14px;'>{dia_num}</div>", unsafe_allow_html=True)
+                else:
+                    if st.button(f"{dia_num}", key=f"samsung_btn_{data_str_atual}"):
+                        st.session_state.dia_selecionado = data_dt
+                        st.rerun()
+                    
+                    st.markdown(f"<div style='margin-top:-6px; text-align:center; min-height:14px;'>{indicadores}</div>", unsafe_allow_html=True)
+
+    # Painel inferior idêntico ao modelo (Detalhes do dia selecionado e botão de adicionar)
+    st.write("---")
+    data_sel_str = st.session_state.dia_selecionado.strftime("%Y-%m-%d")
+    data_sel_formatada = st.session_state.dia_selecionado.strftime("%d %b %Y").upper()
+    dia_semana_nome = st.session_state.dia_selecionado.strftime("%A").upper()
+    
+    st.markdown(f"### **{st.session_state.dia_selecionado.day}** <span style='font-size: 16px; color: #8D6E63;'>{dia_semana_nome}</span>", unsafe_allow_html=True)
+    
+    detalhes_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_sel_str]
+    
+    if detalhes_dia:
+        for d in detalhes_dia:
+            p_cor = "🔴" if d['Prioridade'] == "Alta" else "🟡" if d['Prioridade'] == "Média" else "🟢"
+            estado_txt = "✅ Concluído" if d.get("Concluido") else "⏳ Pendente"
+            st.markdown(f"<div class='exec-card' style='margin-bottom: 10px; padding: 12px;'><b>{d['Hora']}</b> {p_cor} {d['Titulo']} <i>({d['Categoria']})</i> - {estado_txt}<br><span style='color: #8D6E63; font-size: 13px;'>{d.get('Descricao', 'Sem notas adicionais.')}</span></div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<p style='color: #8D6E63; font-style: italic;'>Tap to add a sticker or tasks to this day.</p>", unsafe_allow_html=True)
+
+    # Caixa rápida para adicionar compromisso na data selecionada clicada
+    with st.form(key=f"form_rapido_{data_sel_str}", clear_on_submit=True):
+        st.markdown(f"**Adicionar compromisso em {data_sel_formatada}**")
+        fr_col1, fr_col2, fr_col3 = st.columns([3, 1, 2])
+        with fr_col1:
+            novo_tit = st.text_input("Título", placeholder="Título rápido...", label_visibility="collapsed")
+        with fr_col2:
+            novo_hor = st.time_input("Horário", value=datetime.now(), label_visibility="collapsed")
+        with fr_col3:
+            novo_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], label_visibility="collapsed")
+            
+        btn_adicionar_rapido = st.form_submit_button(f"+ Add on {data_sel_formatada}")
+        if btn_adicionar_rapido:
+            if not novo_tit:
+                st.warning("Insira um título.")
+            else:
+                novo_item_rapido = {
+                    "Titulo": novo_tit,
+                    "Data": data_sel_str,
+                    "Hora": novo_hor.strftime("%H:%M"),
+                    "Prioridade": novo_pri,
+                    "Categoria": "Geral",
+                    "Local": "",
+                    "Descricao": "",
+                    "Concluido": False,
+                    "CriadoEm": datetime.now().strftime("%d/%m/%Y %H:%M")
+                }
+                st.session_state.compromissos.append(novo_item_rapido)
+                salvar_dados(st.session_state.compromissos)
+                st.success("Adicionado com sucesso!")
+                st.rerun()
 
 with aba_novo:
-    st.subheader("➕ Adicionar Novo Compromisso ou Tarefa")
+    st.subheader("➕ Adicionar Novo Compromisso ou Tarefa Completa")
     
     with st.form("form_agenda", clear_on_submit=True):
         c1, c2, c3 = st.columns(3)
         with c1:
             titulo = st.text_input("Título do Compromisso", placeholder="Ex: Reunião Diretoria / Projeto X")
-            data_compromisso = st.date_input("Data", value=hoje_obj)
+            data_compromisso = st.date_input("Data", value=st.session_state.dia_selecionado)
         with c2:
             hora_compromisso = st.time_input("Horário", value=datetime.now())
             prioridade = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
@@ -412,7 +458,7 @@ with aba_editar:
         st.info("Nenhum compromisso cadastrado para editar.")
 
 with aba_agenda:
-    st.subheader("📅 Visão Consolidada (Filtros por Mês e Semana)")
+    st.subheader("📅 Visão Consolidada (Filtros por Categoria e Prioridade)")
     
     if st.session_state.compromissos:
         df_agenda = pd.DataFrame(st.session_state.compromissos)
@@ -450,7 +496,7 @@ with aba_agenda:
         st.info("Nenhum compromisso cadastrado no sistema.")
 
 with aba_widget:
-    st.subheader("📱 Widget Simplificado (Visão de Bolso / Celular)")
+    st.subheader("📱 Widget Simplificado (Visão de Bolso)")
     st.markdown("Uma interface minimalista voltada para consulta rápida vertical ideal para abrir no celular entre reuniões.")
     
     st.markdown("<div class='exec-card'>", unsafe_allow_html=True)

@@ -32,7 +32,7 @@ def salvar_dados(compromissos):
     except Exception as e:
         st.error(f"Erro ao salvar dados localmente: {e}")
 
-# Estilização Executiva (Clean, Moderna e Profissional)
+# Estilização Executiva
 st.markdown(
     """
     <style>
@@ -81,11 +81,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Inicializar Estado da Agenda com o Banco de Dados Local
 if "compromissos" not in st.session_state:
     st.session_state.compromissos = carregar_dados()
 
-# Cabeçalho Executivo
 st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 25px;">
@@ -96,7 +94,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Datas de referência (Usando a base de 2026 para alinhamento temporal correto)
+# Datas de referência
 hoje_obj = datetime.now().date()
 daqui_7_dias_obj = hoje_obj + timedelta(days=7)
 
@@ -105,12 +103,19 @@ col_m1, col_m2, col_m3, col_m4 = st.columns(4)
 
 total_tarefas = len(st.session_state.compromissos)
 compromissos_hoje = sum(
-    1 for c in st.session_state.compromissos if c.get("Data") == hoje_obj.strftime("%Y-%m-%d") and not c.get("Concluido")
+    1 for c in st.session_state.compromissos if c.get("Data") == hoje_obj.strftime("%Y-%m-%d") and not c.get("Concluido", False)
 )
-compromissos_7dias = sum(
-    1 for c in st.session_state.compromissos 
-    if hoje_obj.strftime("%Y-%m-%d") <= c.get("Data", "") <= daqui_7_dias_obj.strftime("%Y-%m-%d") and not c.get("Concluido")
-)
+
+# Cálculo robusto para os próximos 7 dias utilizando objetos de data reais
+compromissos_7dias = 0
+for c in st.session_state.compromissos:
+    if not c.get("Concluido", False) and c.get("Data"):
+        try:
+            data_item = datetime.strptime(c.get("Data"), "%Y-%m-%d").date()
+            if hoje_obj <= data_item <= daqui_7_dias_obj:
+                compromissos_7dias += 1
+        except Exception:
+            pass
 
 with col_m1:
     st.markdown(f"<div class='exec-card'><h3>Compromissos Hoje</h3><p>{compromissos_hoje}</p></div>", unsafe_allow_html=True)
@@ -123,7 +128,6 @@ with col_m4:
 
 st.write("---")
 
-# Abas de Navegação Executiva
 aba_hoje_7dias, aba_agenda, aba_novo, aba_widget, aba_backup = st.tabs([
     "⚡ Visão Foco (Hoje & 7 Dias)", 
     "📅 Visão Completa (Mês/Semana)", 
@@ -154,13 +158,22 @@ with aba_hoje_7dias:
 
     with col_s:
         st.markdown(f"### ⏳ Próximos 7 Dias (Até {daqui_7_dias_obj.strftime('%d/%m/%Y')})")
-        tarefas_7 = [
-            c for c in st.session_state.compromissos 
-            if hoje_obj.strftime("%Y-%m-%d") < c.get("Data", "") <= daqui_7_dias_obj.strftime("%Y-%m-%d")
-        ]
+        
+        tarefas_7 = []
+        for c in st.session_state.compromissos:
+            if c.get("Data"):
+                try:
+                    d_item = datetime.strptime(c.get("Data"), "%Y-%m-%d").date()
+                    # Inclui de hoje até 7 dias pra frente (estrito maior que hoje ou igual)
+                    if hoje_obj <= d_item <= daqui_7_dias_obj:
+                        tarefas_7.append(c)
+                except Exception:
+                    pass
         
         if tarefas_7:
-            for item in tarefas_7:
+            # Ordenar por data/hora
+            tarefas_7_ordenadas = sorted(tarefas_7, key=lambda x: (x.get("Data"), x.get("Hora")))
+            for item in tarefas_7_ordenadas:
                 cor_prioridade = "🔴" if item['Prioridade'] == "Alta" else "🟡" if item['Prioridade'] == "Média" else "🟢"
                 st.markdown(f"- {cor_prioridade} **{item['Data']} às {item['Hora']}**: {item['Titulo']} *({item['Categoria']})*")
         else:
@@ -178,7 +191,12 @@ with aba_novo:
             hora_compromisso = st.time_input("Horário", value=datetime.now())
             prioridade = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
         with c3:
-            categoria = st.selectbox("Categoria", ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem"])
+            lista_categorias = ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Outra..."]
+            categoria_escolhida = st.selectbox("Categoria", lista_categorias)
+            
+            # Campo condicional se escolher "Outra..."
+            categoria_custom = st.text_input("Especifique a Categoria", placeholder="Digite se escolheu 'Outra...'")
+            
             local = st.text_input("Local / Link", placeholder="Ex: Sala de Reuniões 3 ou Meet")
             
         descricao = st.text_area("Notas / Pautas importantes", placeholder="Detalhes rápidos...")
@@ -188,12 +206,17 @@ with aba_novo:
             if not titulo:
                 st.warning("⚠️ O título do compromisso é obrigatório.")
             else:
+                # Definir categoria final baseada na escolha
+                cat_final = categoria_custom.strip() if categoria_escolhida == "Outra..." and categoria_custom.strip() else categoria_escolhida
+                if cat_final == "Outra...":
+                    cat_final = "Geral"
+
                 novo_item = {
                     "Titulo": titulo,
                     "Data": data_compromisso.strftime("%Y-%m-%d"),
                     "Hora": hora_compromisso.strftime("%H:%M"),
                     "Prioridade": prioridade,
-                    "Categoria": categoria,
+                    "Categoria": cat_final,
                     "Local": local,
                     "Descricao": descricao,
                     "Concluido": False,

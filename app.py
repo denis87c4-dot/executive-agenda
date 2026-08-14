@@ -217,7 +217,7 @@ with aba_planner:
     
     st.markdown(f"### 📋 Detalhes do Dia: **{dia_semana_nome_sel}, {data_sel_formatada}**", unsafe_allow_html=True)
     
-    detalhes_dia = [c for c in st.session_state.compromissos if c.get("Data"] == data_sel_str] # type: ignore
+    detalhes_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_sel_str]
     
     if detalhes_dia:
         for d in detalhes_dia:

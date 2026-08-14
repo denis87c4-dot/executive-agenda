@@ -32,40 +32,40 @@ def salvar_dados(compromissos):
     except Exception as e:
         st.error(f"Erro ao salvar dados localmente: {e}")
 
-# Estilização Executiva
+# Estilização Executiva (Fundo Marfim/Bege Claro com Marrom Profissional)
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #0F172A;
-        color: #F8FAFC;
+        background-color: #FAF9F6;
+        color: #2D2926;
     }
     h1, h2, h3 {
-        color: #FFFFFF;
+        color: #5D4037;
         font-family: 'Inter', -apple-system, Helvetica, Arial, sans-serif;
     }
     .exec-card {
-        background-color: #1E293B;
-        border: 1px solid #334155;
+        background-color: #F3EFEA;
+        border: 1px solid #D7CCC8;
         padding: 20px;
         border-radius: 10px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     .exec-card h3 {
         margin: 0;
-        color: #94A3B8;
+        color: #8D6E63;
         font-size: 13px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
     }
     .exec-card p {
         margin: 8px 0 0 0;
-        color: #38BDF8;
+        color: #5D4037;
         font-size: 26px;
         font-weight: bold;
     }
     .stButton>button {
-        background-color: #0284C7;
+        background-color: #5D4037;
         color: white;
         border-radius: 6px;
         padding: 10px 20px;
@@ -74,7 +74,7 @@ st.markdown(
         width: 100%;
     }
     .stButton>button:hover {
-        background-color: #0369A1;
+        background-color: #4E342E;
     }
     </style>
 """,
@@ -86,9 +86,9 @@ if "compromissos" not in st.session_state:
 
 st.markdown(
     """
-    <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 25px;">
+    <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 25px;">
         <h1 style="margin:0; font-size: 28px;">💼 Executive Agenda Pro</h1>
-        <p style="margin:5px 0 0 0; color: #94A3B8; font-size: 15px;">Gestão estratégica de compromissos com persistência e edição flexível.</p>
+        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 15px;">Gestão estratégica de compromissos com persistência e design clássico.</p>
     </div>
 """,
     unsafe_allow_html=True,
@@ -121,13 +121,13 @@ with col_m1:
 with col_m2:
     st.markdown(f"<div class='exec-card'><h3>Próximos 7 Dias</h3><p>{compromissos_7dias}</p></div>", unsafe_allow_html=True)
 with col_m3:
-    st.markdown(f"<div class='exec-card'><h3>Total na Agenda</h3><p style='color: #F8FAFC;'>{total_tarefas}</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='exec-card'><h3>Total na Agenda</h3><p style='color: #5D4037;'>{total_tarefas}</p></div>", unsafe_allow_html=True)
 with col_m4:
-    st.markdown(f"<div class='exec-card'><h3>Status do Núcleo</h3><p style='color: #4ADE80; font-size: 18px; margin-top: 8px;'>● Salvo em Disco</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='exec-card'><h3>Status do Núcleo</h3><p style='color: #2E7D32; font-size: 18px; margin-top: 8px;'>● Salvo em Disco</p></div>", unsafe_allow_html=True)
 
 st.write("---")
 
-# Adicionando a aba "✏️ Editar ou Excluir"
+# Abas de Navegação Executiva Completa
 aba_hoje_7dias, aba_agenda, aba_novo, aba_editar, aba_widget, aba_backup = st.tabs([
     "⚡ Visão Foco (Hoje & 7 Dias)", 
     "📅 Visão Completa", 
@@ -225,7 +225,6 @@ with aba_editar:
     st.subheader("✏️ Editar ou Excluir Compromissos Existentes")
     
     if st.session_state.compromissos:
-        # Criar rótulos claros para identificar cada compromisso no Selectbox
         opcoes_compromissos = {
             f"[{c['Data']} - {c['Hora']}] {c['Titulo']} ({c['Categoria']})": idx 
             for idx, c in enumerate(st.session_state.compromissos)

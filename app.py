@@ -174,15 +174,17 @@ with aba_completa:
 
 with aba_todo:
     st.subheader("📝 List to Do (Tarefas Importantes)")
-    st.write("Anote coisas que não são compromissos com horário fixo, mas que são importantes para você realizar.")
+    st.write("Anote coisas que não são compromissos com horário fixo, mas que possuem prazo limite (Due Date).")
     
     with st.form("form_novo_todo", clear_on_submit=True):
-        td_1, td_2, td_3 = st.columns([3, 1, 1])
+        td_1, td_2, td_3, td_4 = st.columns([2, 1, 1, 1])
         with td_1:
-            td_tit = st.text_input("O que precisa ser feito?", placeholder="Ex: Comprar material, enviar documento...")
+            td_tit = st.text_input("O que precisa ser feito?", placeholder="Ex: Enviar relatório...")
         with td_2:
-            td_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], key="todo_prio")
+            td_due = st.date_input("Prazo (Due Date)", value=datetime.now())
         with td_3:
+            td_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], key="todo_prio")
+        with td_4:
             td_cat = st.text_input("Categoria", value="Geral", placeholder="Ex: Trabalho...")
             
         if st.form_submit_button("➕ Adicionar à List to Do"):
@@ -191,6 +193,7 @@ with aba_todo:
             else:
                 novo_todo = {
                     "Titulo": td_tit,
+                    "DueDate": td_due.strftime("%Y-%m-%d"),
                     "Prioridade": td_pri,
                     "Categoria": td_cat,
                     "Concluido": False,
@@ -202,18 +205,20 @@ with aba_todo:
                 st.rerun()
 
     st.write("---")
-    st.markdown("### 📋 Suas Tarefas Pendentes e Concluídas")
+    st.markdown("### 📋 Suas Tarefas e Prazos")
     
     if st.session_state.todolist:
         for idx, item in enumerate(st.session_state.todolist):
             p_cor = "🔴" if item['Prioridade'] == "Alta" else "🟡" if item['Prioridade'] == "Média" else "🟢"
+            due_str = item.get("DueDate", "")
+            due_fmt = datetime.strptime(due_str, "%Y-%m-%d").strftime("%d/%m/%Y") if due_str else "Sem prazo"
             
             c_td1, c_td2, c_td3 = st.columns([5, 1, 1])
             
             concluido_atual = item.get("Concluido", False)
             estilo_texto = "text-decoration: line-through; color: #8D6E63;" if concluido_atual else "color: #2D2926;"
             
-            c_td1.markdown(f"<div style='{estilo_texto} padding: 5px 0;'>{p_cor} <b>{item['Titulo']}</b> <i>[{item.get('Categoria', 'Geral')}]</i></div>", unsafe_allow_html=True)
+            c_td1.markdown(f"<div style='{estilo_texto} padding: 5px 0;'>{p_cor} <b>{item['Titulo']}</b> | ⏳ Prazo: <b>{due_fmt}</b> <i>[{item.get('Categoria', 'Geral')}]</i></div>", unsafe_allow_html=True)
             
             novo_status = c_td2.checkbox("Feito", value=concluido_atual, key=f"chk_todo_{idx}")
             if novo_status != concluido_atual:

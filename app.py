@@ -13,6 +13,7 @@ st.set_page_config(
 
 DB_FILE = "agenda_executiva_db.json"
 DB_DATAS_IMPORTANTES = "datas_importantes_db.json"
+DB_TODO = "todolist_db.json"
 
 def carregar_dados(arquivo):
     if os.path.exists(arquivo):
@@ -79,11 +80,14 @@ if "compromissos" not in st.session_state:
 if "datas_importantes" not in st.session_state:
     st.session_state.datas_importantes = carregar_dados(DB_DATAS_IMPORTANTES)
 
+if "todolist" not in st.session_state:
+    st.session_state.todolist = carregar_dados(DB_TODO)
+
 st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 20px;">
         <h1 style="margin:0; font-size: 26px;">📅 Executive Dashboard Executivo</h1>
-        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 14px;">Gestão centralizada de compromissos e datas importantes.</p>
+        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 14px;">Gestão centralizada de compromissos, datas importantes e tarefas pendentes.</p>
     </div>
 """,
     unsafe_allow_html=True,
@@ -149,10 +153,11 @@ with col_dash_2:
 st.write("---")
 
 # -------------------------------------------------------------
-# ABAS DO SISTEMA (VISÃO COMPLETA NO LUGAR DO PLANNER MENSAL)
+# ABAS DO SISTEMA
 # -------------------------------------------------------------
-aba_completa, aba_novo, aba_datas, aba_editar, aba_backup = st.tabs([
+aba_completa, aba_todo, aba_novo, aba_datas, aba_editar, aba_backup = st.tabs([
     "📅 Visão Completa", 
+    "📝 List to Do",
     "➕ Novo Compromisso", 
     "⭐ Datas Importantes",
     "✏️ Editar / Excluir",
@@ -166,6 +171,62 @@ with aba_completa:
         st.dataframe(df, use_container_width=True)
     else:
         st.info("Nenhum compromisso cadastrado ainda.")
+
+with aba_todo:
+    st.subheader("📝 List to Do (Tarefas Importantes)")
+    st.write("Anote coisas que não são compromissos com horário fixo, mas que são importantes para você realizar.")
+    
+    with st.form("form_novo_todo", clear_on_submit=True):
+        td_1, td_2, td_3 = st.columns([3, 1, 1])
+        with td_1:
+            td_tit = st.text_input("O que precisa ser feito?", placeholder="Ex: Comprar material, enviar documento...")
+        with td_2:
+            td_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], key="todo_prio")
+        with td_3:
+            td_cat = st.text_input("Categoria", value="Geral", placeholder="Ex: Trabalho...")
+            
+        if st.form_submit_button("➕ Adicionar à List to Do"):
+            if not td_tit:
+                st.warning("Informe a descrição da tarefa.")
+            else:
+                novo_todo = {
+                    "Titulo": td_tit,
+                    "Prioridade": td_pri,
+                    "Categoria": td_cat,
+                    "Concluido": False,
+                    "CriadoEm": datetime.now().strftime("%d/%m/%Y")
+                }
+                st.session_state.todolist.append(novo_todo)
+                salvar_dados(st.session_state.todolist, DB_TODO)
+                st.success("Tarefa adicionada com sucesso!")
+                st.rerun()
+
+    st.write("---")
+    st.markdown("### 📋 Suas Tarefas Pendentes e Concluídas")
+    
+    if st.session_state.todolist:
+        for idx, item in enumerate(st.session_state.todolist):
+            p_cor = "🔴" if item['Prioridade'] == "Alta" else "🟡" if item['Prioridade'] == "Média" else "🟢"
+            
+            c_td1, c_td2, c_td3 = st.columns([5, 1, 1])
+            
+            concluido_atual = item.get("Concluido", False)
+            estilo_texto = "text-decoration: line-through; color: #8D6E63;" if concluido_atual else "color: #2D2926;"
+            
+            c_td1.markdown(f"<div style='{estilo_texto} padding: 5px 0;'>{p_cor} <b>{item['Titulo']}</b> <i>[{item.get('Categoria', 'Geral')}]</i></div>", unsafe_allow_html=True)
+            
+            novo_status = c_td2.checkbox("Feito", value=concluido_atual, key=f"chk_todo_{idx}")
+            if novo_status != concluido_atual:
+                st.session_state.todolist[idx]["Concluido"] = novo_status
+                salvar_dados(st.session_state.todolist, DB_TODO)
+                st.rerun()
+                
+            if c_td3.button("Excluir", key=f"del_todo_{idx}"):
+                st.session_state.todolist.pop(idx)
+                salvar_dados(st.session_state.todolist, DB_TODO)
+                st.rerun()
+    else:
+        st.info("Nenhuma tarefa na List to Do no momento.")
 
 with aba_novo:
     st.subheader("➕ Adicionar Novo Compromisso Completo")
@@ -278,3 +339,5 @@ with aba_backup:
         st.download_button("Baixar JSON Compromissos", json.dumps(st.session_state.compromissos, ensure_ascii=False, indent=4), "agenda.json")
     if st.session_state.datas_importantes:
         st.download_button("Baixar JSON Datas Importantes", json.dumps(st.session_state.datas_importantes, ensure_ascii=False, indent=4), "datas_importantes.json")
+    if st.session_state.todolist:
+        st.download_button("Baixar JSON List to Do", json.dumps(st.session_state.todolist, ensure_ascii=False, indent=4), "todolist.json")

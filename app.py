@@ -13,20 +13,21 @@ st.set_page_config(
 )
 
 DB_FILE = "agenda_executiva_db.json"
+DB_DATAS_IMPORTANTES = "datas_importantes_db.json"
 
-def carregar_dados():
-    if os.path.exists(DB_FILE):
+def carregar_dados(arquivo):
+    if os.path.exists(arquivo):
         try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
+            with open(arquivo, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return []
     return []
 
-def salvar_dados(compromissos):
+def salvar_dados(dados, arquivo):
     try:
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(compromissos, f, ensure_ascii=False, indent=4)
+        with open(arquivo, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=4)
     except Exception as e:
         st.error(f"Erro ao salvar dados localmente: {e}")
 
@@ -74,7 +75,10 @@ st.markdown(
 )
 
 if "compromissos" not in st.session_state:
-    st.session_state.compromissos = carregar_dados()
+    st.session_state.compromissos = carregar_dados(DB_FILE)
+
+if "datas_importantes" not in st.session_state:
+    st.session_state.datas_importantes = carregar_dados(DB_DATAS_IMPORTANTES)
 
 if "dia_selecionado" not in st.session_state:
     st.session_state.dia_selecionado = datetime.now().date()
@@ -83,14 +87,14 @@ st.markdown(
     """
     <div style="padding: 10px 0; border-bottom: 1px solid #D7CCC8; margin-bottom: 20px;">
         <h1 style="margin:0; font-size: 26px;">📅 Executive Planner Mensal</h1>
-        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 14px;">Planejamento estilo planner de mesa (Segunda a Domingo) com visão executiva integrada.</p>
+        <p style="margin:5px 0 0 0; color: #8D6E63; font-size: 14px;">Planejamento estilo planner de mesa com visão executiva e datas importantes.</p>
     </div>
 """,
     unsafe_allow_html=True,
 )
 
 hoje_obj = datetime.now().date()
-daqui_7_dias_obj = hoje_obj + timedelta(days=7)
+daqui_30_dias_obj = hoje_obj + timedelta(days=30)
 hoje_str = hoje_obj.strftime("%Y-%m-%d")
 
 tarefas_atrasadas = [
@@ -107,6 +111,9 @@ if tarefas_atrasadas:
         unsafe_allow_html=True
     )
 
+# -------------------------------------------------------------
+# DASHBOARD: HOJE E DATAS IMPORTANTES
+# -------------------------------------------------------------
 col_dash_1, col_dash_2 = st.columns(2)
 
 with col_dash_1:
@@ -119,38 +126,38 @@ with col_dash_1:
             chk = st.checkbox(f"{p_cor} **{item['Hora']}** - {item['Titulo']} *[{item['Categoria']}]*", value=item.get("Concluido", False), key=f"dash_hoje_{real_idx}")
             if chk != item.get("Concluido", False):
                 st.session_state.compromissos[real_idx]["Concluido"] = chk
-                salvar_dados(st.session_state.compromissos)
+                salvar_dados(st.session_state.compromissos, DB_FILE)
                 st.rerun()
     else:
         st.write("Nenhum compromisso para hoje.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col_dash_2:
-    st.markdown(f"<div class='exec-card'><h3>⏳ Próximos 7 Dias (Até {daqui_7_dias_obj.strftime('%d/%m/%Y')})</h3>", unsafe_allow_html=True)
-    tarefas_7 = []
-    for c in st.session_state.compromissos:
-        if c.get("Data") and not c.get("Concluido", False):
+    st.markdown(f"<div class='exec-card'><h3>⭐ Próximas Datas Importantes</h3>", unsafe_allow_html=True)
+    importantes_futuras = []
+    for d in st.session_state.datas_importantes:
+        if d.get("Data"):
             try:
-                d_item = datetime.strptime(c.get("Data"), "%Y-%m-%d").date()
-                if hoje_obj < d_item <= daqui_7_dias_obj:
-                    tarefas_7.append(c)
+                d_item = datetime.strptime(d.get("Data"), "%Y-%m-%d").date()
+                if d_item >= hoje_obj:
+                    importantes_futuras.append(d)
             except Exception:
                 pass
-    if tarefas_7:
-        tarefas_7_ord = sorted(tarefas_7, key=lambda x: (x.get("Data"), x.get("Hora")))
-        for item in tarefas_7_ord:
-            cor_p = "🔴" if item['Prioridade'] == "Alta" else "🟡" if item['Prioridade'] == "Média" else "🟢"
-            st.markdown(f"- {cor_p} **{item['Data']} às {item['Hora']}**: {item['Titulo']} *({item['Categoria']})*")
+    if importantes_futuras:
+        importantes_ord = sorted(importantes_futuras, key=lambda x: x.get("Data"))
+        for item in importantes_ord[:5]: # Mostra as próximas 5
+            st.markdown(f"- ⭐ **{datetime.strptime(item['Data'], '%Y-%m-%d').strftime('%d/%m/%Y')}**: {item['Titulo']} *({item.get('Categoria', 'Marco')})*")
     else:
-        st.write("Nenhum compromisso nos próximos 7 dias.")
+        st.write("Nenhuma data importante cadastrada para os próximos dias.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 st.write("---")
 
-aba_planner, aba_novo, aba_editar, aba_completa, aba_backup = st.tabs([
-    "🗓️ Planner Mensal (Estilo Mesa)", 
+aba_planner, aba_novo, aba_datas, aba_editar, aba_completa, aba_backup = st.tabs([
+    "🗓️ Planner Mensal", 
     "➕ Novo Compromisso", 
-    "✏️ Editar ou Excluir",
+    "⭐ Datas Importantes",
+    "✏️ Editar / Excluir",
     "📅 Visão Completa", 
     "💾 Backup"
 ])
@@ -230,22 +237,22 @@ with aba_planner:
             chk_concluido = c_chk.checkbox("Concluir", value=d.get("Concluido", False), key=f"chk_planner_{real_idx}")
             if chk_concluido != d.get("Concluido", False):
                 st.session_state.compromissos[real_idx]["Concluido"] = chk_concluido
-                salvar_dados(st.session_state.compromissos)
+                salvar_dados(st.session_state.compromissos, DB_FILE)
                 st.rerun()
     else:
         st.info("Nenhum compromisso agendado para este dia no planner.")
 
     with st.form(key=f"form_rapido_planner_{data_sel_str}", clear_on_submit=True):
-        st.markdown(f"**➕ Adicionar anotação ou compromisso em {data_sel_formatada}**")
+        st.markdown(f"**➕ Adicionar compromisso em {data_sel_formatada}**")
         fr_1, fr_2, fr_3, fr_4 = st.columns([2, 1, 1, 1])
         with fr_1:
-            novo_tit = st.text_input("Título", placeholder="Compromisso ou tarefa...")
+            novo_tit = st.text_input("Título", placeholder="Compromisso...")
         with fr_2:
             novo_hor = st.time_input("Horário", value=datetime.now())
         with fr_3:
             novo_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
         with fr_4:
-            novo_cat = st.text_input("Categoria", value="Geral", placeholder="Ex: Trabalho...")
+            novo_cat = st.text_input("Categoria", value="Geral", placeholder="Categoria...")
             
         btn_add = st.form_submit_button(f"Salvar em {data_sel_formatada}")
         if btn_add:
@@ -264,7 +271,7 @@ with aba_planner:
                     "CriadoEm": datetime.now().strftime("%d/%m/%Y %H:%M")
                 }
                 st.session_state.compromissos.append(novo_item_rapido)
-                salvar_dados(st.session_state.compromissos)
+                salvar_dados(st.session_state.compromissos, DB_FILE)
                 st.success("Adicionado com sucesso!")
                 st.rerun()
 
@@ -300,9 +307,49 @@ with aba_novo:
                     "CriadoEm": datetime.now().strftime("%d/%m/%Y %H:%M")
                 }
                 st.session_state.compromissos.append(novo_item)
-                salvar_dados(st.session_state.compromissos)
+                salvar_dados(st.session_state.compromissos, DB_FILE)
                 st.success("Salvo com sucesso!")
                 st.rerun()
+
+with aba_datas:
+    st.subheader("⭐ Gerenciador de Datas Importantes")
+    st.write("Cadastre aniversários, feriados, prazos de entrega ou marcos que merecem destaque.")
+    
+    with st.form("form_data_importante", clear_on_submit=True):
+        di_1, di_2, di_3 = st.columns(3)
+        with di_1:
+            di_tit = st.text_input("Descrição do Marco / Data", placeholder="Ex: Aniversário da Empresa / Prazo Final")
+        with di_2:
+            di_data = st.date_input("Data do Marco")
+        with di_3:
+            di_cat = st.text_input("Categoria", value="Marco", placeholder="Ex: Aniversário, Projeto...")
+            
+        if st.form_submit_button("⭐ Salvar Data Importante"):
+            if not di_tit:
+                st.warning("Informe o título da data.")
+            else:
+                nova_di = {
+                    "Titulo": di_tit,
+                    "Data": di_data.strftime("%Y-%m-%d"),
+                    "Categoria": di_cat
+                }
+                st.session_state.datas_importantes.append(nova_di)
+                salvar_dados(st.session_state.datas_importantes, DB_DATAS_IMPORTANTES)
+                st.success("Data importante salva com sucesso!")
+                st.rerun()
+
+    st.write("---")
+    st.markdown("### 📋 Datas Importantes Cadastradas")
+    if st.session_state.datas_importantes:
+        for idx, item in enumerate(st.session_state.datas_importantes):
+            col_di1, col_di2 = st.columns([5, 1])
+            col_di1.markdown(f"- ⭐ **{datetime.strptime(item['Data'], '%Y-%m-%d').strftime('%d/%m/%Y')}**: {item['Titulo']} *({item.get('Categoria', 'Marco')})*")
+            if col_di2.button("Excluir", key=f"del_di_{idx}"):
+                st.session_state.datas_importantes.pop(idx)
+                salvar_dados(st.session_state.datas_importantes, DB_DATAS_IMPORTANTES)
+                st.rerun()
+    else:
+        st.info("Nenhuma data importante cadastrada.")
 
 with aba_editar:
     st.subheader("✏️ Editar ou Excluir Compromissos")
@@ -322,12 +369,12 @@ with aba_editar:
             c_b1, c_b2 = st.columns(2)
             if c_b1.form_submit_button("💾 Salvar"):
                 st.session_state.compromissos[idx_sel].update({"Titulo": nt, "Data": str(nd), "Hora": str(nh), "Prioridade": np, "Categoria": nc})
-                salvar_dados(st.session_state.compromissos)
+                salvar_dados(st.session_state.compromissos, DB_FILE)
                 st.success("Atualizado!")
                 st.rerun()
             if c_b2.form_submit_button("🗑️ Excluir"):
                 st.session_state.compromissos.pop(idx_sel)
-                salvar_dados(st.session_state.compromissos)
+                salvar_dados(st.session_state.compromissos, DB_FILE)
                 st.success("Excluído!")
                 st.rerun()
     else:
@@ -344,4 +391,6 @@ with aba_completa:
 with aba_backup:
     st.subheader("💾 Backup e Sincronização")
     if st.session_state.compromissos:
-        st.download_button("Baixar JSON", json.dumps(st.session_state.compromissos, ensure_ascii=False, indent=4), "agenda.json")
+        st.download_button("Baixar JSON Compromissos", json.dumps(st.session_state.compromissos, ensure_ascii=False, indent=4), "agenda.json")
+    if st.session_state.datas_importantes:
+        st.download_button("Baixar JSON Datas Importantes", json.dumps(st.session_state.datas_importantes, ensure_ascii=False, indent=4), "datas_importantes.json")

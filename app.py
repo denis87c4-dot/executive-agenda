@@ -125,7 +125,7 @@ col_dash_1, col_dash_2 = st.columns(2)
 
 with col_dash_1:
     st.markdown(f"<div class='exec-card'><h3>📌 Para Hoje ({hoje_obj.strftime('%d/%m/%Y')})</h3>", unsafe_allow_html=True)
-    tarefas_hoje = [c for c in st.session_state.compromissos if c.get("Data"] == hoje_str]
+    tarefas_hoje = [c for c in st.session_state.compromissos if c.get("Data") == hoje_str]
     if tarefas_hoje:
         for item in tarefas_hoje:
             real_idx = st.session_state.compromissos.index(item)
@@ -195,7 +195,7 @@ with aba_planner:
     # Cabeçalho do Planner (Segunda a Domingo)
     cols_cab = st.columns(7)
     for i, d_nome in enumerate(dias_semana_nome):
-        cor_cab = "#D32F2F" if i >= 5 else "#5D4037" # Finais de semana em destaque
+        cor_cab = "#D32F2F" if i >= 5 else "#5D4037"
         cols_cab[i].markdown(f"<div style='text-align: center; font-weight: bold; color: {cor_cab}; font-size: 13px; background-color: #F3EFEA; padding: 6px; border-radius: 4px;'>{d_nome}</div>", unsafe_allow_html=True)
         
     st.write("")
@@ -215,20 +215,17 @@ with aba_planner:
                 if not pertence_ao_mes:
                     st.markdown(f"<div style='background-color: #FAF9F6; border: 1px dashed #E0D9D0; border-radius: 4px; padding: 6px; min-height: 85px; color: #D7CCC8; text-align: right; font-size: 12px;'>{dia_num}</div>", unsafe_allow_html=True)
                 else:
-                    # Botão estilo caixinha do dia do planner
                     is_selecionado = (st.session_state.dia_selecionado == data_dt)
                     estilo_fundo = "background-color: #FFFFFF; border: 2px solid #5D4037;" if is_selecionado else "background-color: #FFFFFF; border: 1px solid #D7CCC8;"
                     
-                    # Montar resumos curtos das tarefas dentro da caixinha
                     resumo_tarefas = ""
-                    for t in tarefas_do_dia[:3]: # Mostra até 3 para não estourar o layout
+                    for t in tarefas_do_dia[:3]:
                         prio_cor = "🔴" if t['Prioridade'] == "Alta" else "🟡" if t['Prioridade'] == "Média" else "🟢"
                         resumo_tarefas += f"<div style='font-size: 10px; color: #2D2926; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{prio_cor} {t['Hora']} {t['Titulo']}</div>"
                     
                     if len(tarefas_do_dia) > 3:
                         resumo_tarefas += f"<div style='font-size: 9px; color: #8D6E63;'>+{len(tarefas_do_dia)-3} mais</div>"
 
-                    # Renderização do dia como botão interativo
                     if st.button(f"{dia_num}", key=f"planner_btn_{data_str_atual}"):
                         st.session_state.dia_selecionado = data_dt
                         st.rerun()
@@ -261,7 +258,6 @@ with aba_planner:
     else:
         st.info("Nenhum compromisso agendado para este dia no planner.")
 
-    # Caixa de Adição Rápida na data selecionada
     with st.form(key=f"form_rapido_planner_{data_sel_str}", clear_on_submit=True):
         st.markdown(f"**➕ Adicionar anotação ou compromisso em {data_sel_formatada}**")
         fr_1, fr_2, fr_3 = st.columns([3, 1, 2])

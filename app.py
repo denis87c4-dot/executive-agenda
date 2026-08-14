@@ -30,7 +30,6 @@ def salvar_dados(compromissos):
     except Exception as e:
         st.error(f"Erro ao salvar dados localmente: {e}")
 
-# Estilização Global Planner (Fundo Marfim #FAF9F6, Bordas e Tons Executivos)
 st.markdown(
     """
     <style>
@@ -94,7 +93,6 @@ hoje_obj = datetime.now().date()
 daqui_7_dias_obj = hoje_obj + timedelta(days=7)
 hoje_str = hoje_obj.strftime("%Y-%m-%d")
 
-# Alerta de Atraso
 tarefas_atrasadas = [
     c for c in st.session_state.compromissos 
     if not c.get("Concluido", False) and c.get("Data", "") < hoje_str
@@ -109,9 +107,6 @@ if tarefas_atrasadas:
         unsafe_allow_html=True
     )
 
-# -------------------------------------------------------------
-# DASHBOARD: HOJE E DAQUI A 7 DIAS
-# -------------------------------------------------------------
 col_dash_1, col_dash_2 = st.columns(2)
 
 with col_dash_1:
@@ -152,9 +147,6 @@ with col_dash_2:
 
 st.write("---")
 
-# -------------------------------------------------------------
-# ABAS DE NAVEGAÇÃO
-# -------------------------------------------------------------
 aba_planner, aba_novo, aba_editar, aba_completa, aba_backup = st.tabs([
     "🗓️ Planner Mensal (Estilo Mesa)", 
     "➕ Novo Compromisso", 
@@ -164,7 +156,6 @@ aba_planner, aba_novo, aba_editar, aba_completa, aba_backup = st.tabs([
 ])
 
 with aba_planner:
-    # Seletor de Mês e Ano Estilo Planner
     c_ano, c_mes = st.columns(2)
     with c_ano:
         ano_selecionado = st.selectbox("Ano", [2025, 2026, 2027], index=1, key="pl_ano")
@@ -179,11 +170,9 @@ with aba_planner:
     st.markdown(f"<h2 style='text-align: center; letter-spacing: 3px; color: #5D4037;'>PLANNER MENSAL - {meses_dict[mes_selecionado]} / {ano_selecionado}</h2>", unsafe_allow_html=True)
     st.write("")
 
-    # Configuração de Calendário começando na SEGUNDA-FEIRA (firstweekday=0)
     cal_matriz = calendar.Calendar(firstweekday=0).monthdatescalendar(ano_selecionado, mes_selecionado)
     dias_semana_nome = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
     
-    # Cabeçalho do Planner (Segunda a Domingo)
     cols_cab = st.columns(7)
     for i, d_nome in enumerate(dias_semana_nome):
         cor_cab = "#D32F2F" if i >= 5 else "#5D4037"
@@ -191,7 +180,6 @@ with aba_planner:
         
     st.write("")
 
-    # Renderização da grade do Planner (linhas de semanas)
     for semana in cal_matriz:
         cols_semana = st.columns(7)
         for i, data_dt in enumerate(semana):
@@ -200,7 +188,6 @@ with aba_planner:
                 pertence_ao_mes = (data_dt.month == mes_selecionado)
                 data_str_atual = data_dt.strftime("%Y-%m-%d")
                 
-                # Compromissos do dia
                 tarefas_do_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_str_atual and not c.get("Concluido", False)]
                 
                 if not pertence_ao_mes:
@@ -223,7 +210,6 @@ with aba_planner:
                     
                     st.markdown(f"<div style='{estilo_fundo} border-radius: 4px; padding: 4px 6px; margin-top: -38px; min-height: 80px; pointer-events: none;'><b>{dia_num}</b><hr style='margin: 2px 0; border-top: 1px solid #E0D9D0;'>{resumo_tarefas}</div>", unsafe_allow_html=True)
 
-    # Painel Inferior: Detalhes do Dia Selecionado + Adicionar Rápido com Categoria
     st.write("---")
     data_sel_str = st.session_state.dia_selecionado.strftime("%Y-%m-%d")
     data_sel_formatada = st.session_state.dia_selecionado.strftime("%d/%m/%Y")
@@ -231,7 +217,7 @@ with aba_planner:
     
     st.markdown(f"### 📋 Detalhes do Dia: **{dia_semana_nome_sel}, {data_sel_formatada}**", unsafe_allow_html=True)
     
-    detalhes_dia = [c for c in st.session_state.compromissos if c.get("Data") == data_sel_str]
+    detalhes_dia = [c for c in st.session_state.compromissos if c.get("Data"] == data_sel_str] # type: ignore
     
     if detalhes_dia:
         for d in detalhes_dia:
@@ -253,13 +239,13 @@ with aba_planner:
         st.markdown(f"**➕ Adicionar anotação ou compromisso em {data_sel_formatada}**")
         fr_1, fr_2, fr_3, fr_4 = st.columns([2, 1, 1, 1])
         with fr_1:
-            novo_tit = st.text_input("Título", placeholder="Compromisso ou tarefa...", label_visibility="collapsed")
+            novo_tit = st.text_input("Título", placeholder="Compromisso ou tarefa...")
         with fr_2:
-            novo_hor = st.time_input("Horário", value=datetime.now(), label_visibility="collapsed")
+            novo_hor = st.time_input("Horário", value=datetime.now())
         with fr_3:
-            novo_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], label_visibility="collapsed")
+            novo_pri = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
         with fr_4:
-            novo_cat = st.selectbox("Categoria", ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Geral"], label_visibility="collapsed")
+            novo_cat = st.text_input("Categoria", value="Geral", placeholder="Ex: Trabalho...")
             
         btn_add = st.form_submit_button(f"Salvar em {data_sel_formatada}")
         if btn_add:
@@ -293,7 +279,7 @@ with aba_novo:
             hora_compromisso = st.time_input("Horário", value=datetime.now())
             prioridade = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
         with c3:
-            categoria = st.selectbox("Categoria", ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Geral"])
+            categoria = st.text_input("Categoria", value="Geral", placeholder="Ex: Trabalho, Pessoal...")
             local = st.text_input("Local / Link", placeholder="Sala ou Meet")
             
         descricao = st.text_area("Notas / Pautas", placeholder="Detalhes...")
@@ -331,7 +317,7 @@ with aba_editar:
             nd = st.date_input("Data", value=datetime.strptime(item["Data"], "%Y-%m-%d").date())
             nh = st.time_input("Hora", value=datetime.strptime(item["Hora"], "%H:%M").time())
             np = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"], index=["Alta", "Média", "Baixa"].index(item.get("Prioridade", "Média")))
-            nc = st.selectbox("Categoria", ["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Geral"], index=["Reunião", "Prazo Crítico", "Pessoal", "Projeto", "Viagem", "Geral"].index(item.get("Categoria", "Geral")))
+            nc = st.text_input("Categoria", value=item.get("Categoria", "Geral"))
             
             c_b1, c_b2 = st.columns(2)
             if c_b1.form_submit_button("💾 Salvar"):
